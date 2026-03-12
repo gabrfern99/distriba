@@ -1,0 +1,29 @@
+model Product {
+  id           String   @id @default(cuid())
+  name         String
+  sku          String
+  description  String?
+  baseUnitName String   @default("unidade")
+  baseUnitId   String?
+  baseUnit     ProductUnit? @relation("BaseUnit", fields: [baseUnitId], references: [id], onDelete: SetNull)
+  currentStock Decimal  @default(0) @db.Decimal(15, 4)
+  minStock     Decimal  @default(0) @db.Decimal(15, 4)
+  costPrice    Decimal  @default(0) @db.Decimal(15, 2)
+  salePrice    Decimal  @default(0) @db.Decimal(15, 2)
+  isActive     Boolean  @default(true)
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  productUnits   ProductUnit[]
+  stockMovements StockMovement[]
+  saleItems      SaleItem[]
+  purchaseItems  PurchaseOrderItem[]
+  inventoryItems InventoryItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@map("products")
+}

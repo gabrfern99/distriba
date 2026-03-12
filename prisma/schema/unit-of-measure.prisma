@@ -1,0 +1,15 @@
+model UnitOfMeasure {
+  id           String   @id @default(cuid())
+  name         String
+  abbreviation String
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  productUnits ProductUnit[]
+
+  @@unique([tenantId, abbreviation])
+  @@index([tenantId])
+  @@map("units_of_measure")
+}

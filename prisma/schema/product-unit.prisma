@@ -1,0 +1,14 @@
+model ProductUnit {
+  id               String        @id @default(cuid())
+  productId        String
+  product          Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitOfMeasureId  String
+  unitOfMeasure    UnitOfMeasure @relation(fields: [unitOfMeasureId], references: [id])
+  conversionFactor Decimal       @db.Decimal(15, 4)
+  salePrice        Decimal       @default(0) @db.Decimal(15, 2)
+
+  baseOfProducts Product[] @relation("BaseUnit")
+
+  @@unique([productId, unitOfMeasureId])
+  @@map("product_units")
+}

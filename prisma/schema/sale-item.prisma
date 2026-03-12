@@ -1,0 +1,18 @@
+model SaleItem {
+  id               String  @id @default(cuid())
+  saleId           String
+  sale             Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product @relation(fields: [productId], references: [id])
+  productName      String
+  productSku       String
+  unitName         String
+  unitPrice        Decimal @db.Decimal(15, 2)
+  quantity         Decimal @db.Decimal(15, 4)
+  conversionFactor Decimal @default(1) @db.Decimal(15, 4)
+  baseQuantity     Decimal @db.Decimal(15, 4)
+  subtotal         Decimal @db.Decimal(15, 2)
+
+  @@index([saleId])
+  @@map("sale_items")
+}

@@ -1,0 +1,21 @@
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  globalRole   GlobalRole @default(USER)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenantId   String?
+  tenant     Tenant?    @relation(fields: [tenantId], references: [id])
+  tenantRole TenantRole @default(OPERATOR)
+
+  stockMovements StockMovement[]
+  sales          Sale[]
+  inventories    Inventory[]
+
+  @@index([tenantId])
+  @@map("users")
+}

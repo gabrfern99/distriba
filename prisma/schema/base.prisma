@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  OPERATOR
+  STOCK_MANAGER
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+}
+
+enum MovementOrigin {
+  SALE
+  PURCHASE_ORDER
+  INVENTORY_ADJUSTMENT
+  MANUAL
+}
+
+enum InventoryStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum SaleStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  COMPLETED
+  CANCELLED
+}

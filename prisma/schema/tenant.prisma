@@ -1,0 +1,27 @@
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  document  String?
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  logoUrl   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users          User[]
+  products       Product[]
+  unitOfMeasures UnitOfMeasure[]
+  sales          Sale[]
+  purchaseOrders PurchaseOrder[]
+  suppliers      Supplier[]
+  stockMovements StockMovement[]
+  inventories    Inventory[]
+
+  @@map("tenants")
+}

@@ -1,0 +1,14 @@
+model InventoryItem {
+  id            String    @id @default(cuid())
+  inventoryId   String
+  inventory     Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  systemStock   Decimal   @db.Decimal(15, 4)
+  countedStock  Decimal   @db.Decimal(15, 4)
+  difference    Decimal   @db.Decimal(15, 4)
+  justification String
+
+  @@unique([inventoryId, productId])
+  @@map("inventory_items")
+}

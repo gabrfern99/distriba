@@ -1,0 +1,17 @@
+model PurchaseOrderItem {
+  id               String        @id @default(cuid())
+  purchaseOrderId  String
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product       @relation(fields: [productId], references: [id])
+  productName      String
+  unitName         String
+  unitPrice        Decimal       @db.Decimal(15, 2)
+  quantity         Decimal       @db.Decimal(15, 4)
+  conversionFactor Decimal       @default(1) @db.Decimal(15, 4)
+  baseQuantity     Decimal       @db.Decimal(15, 4)
+  subtotal         Decimal       @db.Decimal(15, 2)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}

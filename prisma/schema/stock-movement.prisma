@@ -1,0 +1,24 @@
+model StockMovement {
+  id            String         @id @default(cuid())
+  productId     String
+  product       Product        @relation(fields: [productId], references: [id])
+  type          MovementType
+  origin        MovementOrigin
+  quantity      Decimal        @db.Decimal(15, 4)
+  unitName      String?
+  unitQuantity  Decimal?       @db.Decimal(15, 4)
+  previousStock Decimal        @db.Decimal(15, 4)
+  newStock      Decimal        @db.Decimal(15, 4)
+  referenceId   String?
+  notes         String?
+  userId        String
+  user          User           @relation(fields: [userId], references: [id])
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime       @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, productId])
+  @@index([tenantId, createdAt])
+  @@map("stock_movements")
+}
