@@ -9,7 +9,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/distribuidora
       - AUTH_SECRET=supersecret-change-in-production
-      - AUTH_URL=http://localhost:3000
+      - AUTH_URL=https://noop.tail617ede.ts.net
     depends_on:
       db:
         condition: service_healthy
