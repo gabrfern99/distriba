@@ -10,7 +10,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 RUN npm run build
 
 FROM base AS runner
@@ -25,13 +25,10 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma files needed for migrate deploy at startup
+# Full node_modules needed for prisma migrate deploy at startup
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=builder /app/prisma.config.mjs ./prisma.config.mjs
+COPY --from=builder /app/node_modules ./node_modules
 
 # Entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
