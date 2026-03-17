@@ -326,7 +326,7 @@ export function BarcodeScanner({ onScan }: BarcodeScannerProps) {
             </div>
 
             <div className="px-4 py-2.5 text-xs text-muted-foreground text-center border-t border-border">
-              Scanners USB/Bluetooth funcionam diretamente no campo de busca.
+              Scanner USB/Bluetooth: escaneie a qualquer momento, com ou sem foco no campo.
             </div>
           </div>
         </div>

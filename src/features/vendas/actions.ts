@@ -135,6 +135,28 @@ export async function completeSale(saleId: string) {
       throw new Error('Venda inválida ou já processada')
     }
 
+    // Aggregate total baseQuantity per product (handles duplicate lines for same product)
+    const totalByProduct = new Map<string, { total: number; name: string }>()
+    for (const item of sale.items) {
+      const baseQty = parseFloat(item.baseQuantity.toString())
+      const existing = totalByProduct.get(item.productId)
+      if (existing) {
+        existing.total += baseQty
+      } else {
+        totalByProduct.set(item.productId, { total: baseQty, name: item.productName })
+      }
+    }
+
+    // Validate all products before touching any stock
+    for (const [productId, { total, name }] of totalByProduct) {
+      const product = await tx.product.findUniqueOrThrow({ where: { id: productId } })
+      const currentStock = parseFloat(product.currentStock.toString())
+      if (currentStock < total) {
+        throw new InsufficientStockError(name)
+      }
+    }
+
+    // Deduct stock and create movements
     for (const item of sale.items) {
       const product = await tx.product.findUniqueOrThrow({
         where: { id: item.productId },
@@ -142,11 +164,6 @@ export async function completeSale(saleId: string) {
 
       const currentStock = parseFloat(product.currentStock.toString())
       const baseQty = parseFloat(item.baseQuantity.toString())
-
-      if (currentStock < baseQty) {
-        throw new InsufficientStockError(item.productName)
-      }
-
       const newStock = currentStock - baseQty
 
       await tx.stockMovement.create({

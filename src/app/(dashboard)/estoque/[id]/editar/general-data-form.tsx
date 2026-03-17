@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { BarcodeScanner } from '@/components/shared/barcode-scanner'
+import { useHardwareScanner } from '@/hooks/use-hardware-scanner'
 
 interface GeneralDataFormProps {
   product: {
@@ -24,6 +25,8 @@ export function GeneralDataForm({ product, baseUnitLabel }: GeneralDataFormProps
   const action = updateProductGeneral.bind(null, product.id)
   const [state, formAction, isPending] = useActionState(action, null)
   const [sku, setSku] = useState(product.sku)
+
+  useHardwareScanner((code) => setSku(code))
 
   useEffect(() => {
     if (state?.success) {

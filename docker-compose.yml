@@ -10,6 +10,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/distribuidora
       - AUTH_SECRET=supersecret-change-in-production
       - AUTH_URL=https://noop.tail617ede.ts.net
+      - COSMOS_API_TOKEN=KZpxzMef-dp5QH5uvSs5Dw
     depends_on:
       db:
         condition: service_healthy

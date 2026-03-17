@@ -10,6 +10,7 @@ import { formatCurrency, formatDecimal } from '@/lib/utils'
 import { Trash2, Plus, Check, Search, ShoppingCart, Package, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { BarcodeScanner } from '@/components/shared/barcode-scanner'
+import { useHardwareScanner } from '@/hooks/use-hardware-scanner'
 
 interface ProductUnit {
   id: string
@@ -68,6 +69,8 @@ export function PDV({ products }: { products: Product[] }) {
     if (state?.error) toast(state.error, 'error')
   }, [state])
 
+  useHardwareScanner(handleBarcodeScan)
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'F2') {
@@ -81,13 +84,19 @@ export function PDV({ products }: { products: Product[] }) {
 
   async function handleComplete(saleId: string) {
     setCompleting(true)
-    const result = await completeSale(saleId)
-    setCompleting(false)
-    if ('error' in result && typeof result.error === 'string') {
-      toast(result.error, 'error')
-    } else {
-      toast('Venda concluída com sucesso!')
-      router.push('/vendas')
+    try {
+      const result = await completeSale(saleId)
+      if ('error' in result && typeof result.error === 'string') {
+        toast(result.error, 'error')
+      } else {
+        toast('Venda concluída com sucesso!')
+        router.push('/vendas')
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao finalizar venda'
+      toast(msg, 'error')
+    } finally {
+      setCompleting(false)
     }
   }
 
@@ -202,19 +211,34 @@ export function PDV({ products }: { products: Product[] }) {
       toast('Quantidade inválida', 'error')
       return
     }
-    setCart((prev) => [
-      ...prev,
-      {
-        productId: selectedProduct.id,
-        productName: selectedProduct.name,
-        productSku: selectedProduct.sku,
-        unitName: selectedUnit?.name ?? '',
-        conversionFactor: selectedUnit?.conversionFactor ?? 1,
-        quantity: qty,
-        unitPrice: price,
-        subtotal: Math.round(qty * price * 100) / 100,
-      },
-    ])
+    setCart((prev) => {
+      const existingIdx = prev.findIndex(
+        (item) =>
+          item.productId === selectedProduct.id &&
+          item.unitName === (selectedUnit?.name ?? '') &&
+          item.unitPrice === price,
+      )
+      if (existingIdx !== -1) {
+        return prev.map((item, i) => {
+          if (i !== existingIdx) return item
+          const newQty = item.quantity + qty
+          return { ...item, quantity: newQty, subtotal: Math.round(newQty * item.unitPrice * 100) / 100 }
+        })
+      }
+      return [
+        ...prev,
+        {
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          productSku: selectedProduct.sku,
+          unitName: selectedUnit?.name ?? '',
+          conversionFactor: selectedUnit?.conversionFactor ?? 1,
+          quantity: qty,
+          unitPrice: price,
+          subtotal: Math.round(qty * price * 100) / 100,
+        },
+      ]
+    })
     clearProduct()
   }
 

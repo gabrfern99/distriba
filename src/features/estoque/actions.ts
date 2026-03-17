@@ -548,3 +548,41 @@ export async function completeInventory(id: string) {
   updateTag('products')
   return { success: true }
 }
+
+// ==================== COSMOS BLUESOFT ====================
+
+interface CosmosProduct {
+  name: string | null
+  description: string | null
+}
+
+export async function lookupGtin(gtin: string): Promise<CosmosProduct | null> {
+  const token = process.env.COSMOS_API_TOKEN
+  console.log('[Cosmos] lookupGtin called, gtin:', gtin, '| token set:', !!token)
+  if (!token) return null
+
+  try {
+    console.log('[Cosmos] fetching...')
+    const res = await fetch(`https://api.cosmos.bluesoft.com.br/gtins/${encodeURIComponent(gtin)}`, {
+      headers: {
+        'X-Cosmos-Token': token,
+        'Content-Type': 'application/json',
+      },
+      next: { revalidate: 86400 },
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json()
+
+    const name: string = data.description ?? ''
+    const parts: string[] = []
+    if (data.brand?.name) parts.push(data.brand.name)
+    if (data.gpc?.description) parts.push(data.gpc.description)
+    const description = parts.join(' · ') || null
+
+    return { name: name || null, description }
+  } catch {
+    return null
+  }
+}
