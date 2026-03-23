@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { toggleProductStatus } from '@/features/estoque/actions'
+import { toggleProductStatus, deleteProduct } from '@/features/estoque/actions'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 
@@ -12,7 +12,8 @@ interface ProductActionsProps {
 }
 
 export function ProductActions({ productId, productName, isActive }: ProductActionsProps) {
-  const [open, setOpen] = useState(false)
+  const [toggleOpen, setToggleOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -20,7 +21,7 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
     setLoading(true)
     const result = await toggleProductStatus(productId)
     setLoading(false)
-    setOpen(false)
+    setToggleOpen(false)
     if (result.error) {
       toast(result.error, 'error')
     } else {
@@ -28,17 +29,36 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
     }
   }
 
+  async function handleDelete() {
+    setLoading(true)
+    const result = await deleteProduct(productId)
+    setLoading(false)
+    setDeleteOpen(false)
+    if (result.error) {
+      toast(result.error, 'error')
+    } else {
+      toast('Produto excluído com sucesso')
+    }
+  }
+
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => setToggleOpen(true)}
         className={`hover:underline text-xs ${isActive ? 'text-destructive' : 'text-primary'}`}
       >
         {isActive ? 'Desativar' : 'Reativar'}
       </button>
 
+      <button
+        onClick={() => setDeleteOpen(true)}
+        className="hover:underline text-xs text-destructive"
+      >
+        Excluir
+      </button>
+
       <ConfirmDialog
-        open={open}
+        open={toggleOpen}
         title={isActive ? 'Desativar produto' : 'Reativar produto'}
         description={
           isActive
@@ -46,8 +66,18 @@ export function ProductActions({ productId, productName, isActive }: ProductActi
             : `Deseja reativar o produto "${productName}"? Ele voltará a aparecer nas listagens.`
         }
         onConfirm={handleToggle}
-        onCancel={() => setOpen(false)}
+        onCancel={() => setToggleOpen(false)}
         confirmLabel={isActive ? 'Desativar' : 'Reativar'}
+        loading={loading}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Excluir produto"
+        description={`Deseja excluir permanentemente o produto "${productName}"? Esta ação não pode ser desfeita. Se o produto possuir registros vinculados, a exclusão será bloqueada.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteOpen(false)}
+        confirmLabel="Excluir"
         loading={loading}
       />
     </>

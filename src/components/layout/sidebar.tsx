@@ -27,12 +27,12 @@ interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-  },
+  // {
+  //   label: 'Dashboard',
+  //   href: '/dashboard',
+  //   icon: LayoutDashboard,
+  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+  // },
   {
     label: 'Estoque',
     icon: Package,
@@ -43,35 +43,35 @@ const allNavItems: NavItem[] = [
       { label: 'Unidades', href: '/estoque/unidades' },
     ],
   },
-  {
-    label: 'Vendas',
-    icon: ShoppingCart,
-    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-    children: [
-      { label: 'Lista de Vendas', href: '/vendas' },
-      { label: 'Nova Venda (PDV)', href: '/vendas/nova' },
-    ],
-  },
-  {
-    label: 'Compras',
-    icon: ShoppingBag,
-    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-    children: [
-      { label: 'Pedidos de Compra', href: '/compras' },
-      { label: 'Novo Pedido', href: '/compras/novo' },
-      { label: 'Fornecedores', href: '/compras/fornecedores' },
-    ],
-  },
-  {
-    label: 'Configurações',
-    icon: Settings,
-    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-    children: [
-      { label: 'Empresa', href: '/configuracoes' },
-      { label: 'Meu Perfil', href: '/configuracoes/perfil' },
-      { label: 'Usuários', href: '/configuracoes/usuarios' },
-    ],
-  },
+  // {
+  //   label: 'Vendas',
+  //   icon: ShoppingCart,
+  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+  //   children: [
+  //     { label: 'Lista de Vendas', href: '/vendas' },
+  //     { label: 'Nova Venda (PDV)', href: '/vendas/nova' },
+  //   ],
+  // },
+  // {
+  //   label: 'Compras',
+  //   icon: ShoppingBag,
+  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+  //   children: [
+  //     { label: 'Pedidos de Compra', href: '/compras' },
+  //     { label: 'Novo Pedido', href: '/compras/novo' },
+  //     { label: 'Fornecedores', href: '/compras/fornecedores' },
+  //   ],
+  // },
+  // {
+  //   label: 'Configurações',
+  //   icon: Settings,
+  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+  //   children: [
+  //     { label: 'Empresa', href: '/configuracoes' },
+  //     { label: 'Meu Perfil', href: '/configuracoes/perfil' },
+  //     { label: 'Usuários', href: '/configuracoes/usuarios' },
+  //   ],
+  // },
 ]
 
 function getNavItems(tenantRole?: string): NavItem[] {

@@ -9,7 +9,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/distribuidora
       - AUTH_SECRET=supersecret-change-in-production
-      - AUTH_URL=https://noop.tail617ede.ts.net
+      - AUTH_URL=http://127.0.0.1:3000/
       - COSMOS_API_TOKEN=KZpxzMef-dp5QH5uvSs5Dw
     depends_on:
       db:

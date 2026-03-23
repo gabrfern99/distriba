@@ -1,11 +1,62 @@
 import { getInventories } from '@/features/estoque/actions'
+import { getInventoryById } from '@/features/estoque/actions'
 import { formatDateTime } from '@/lib/utils'
 import { InventoryStatusBadge } from '@/components/shared/status-badge'
 import { EmptyState } from '@/components/shared/empty-state'
-import { ClipboardList, Plus } from 'lucide-react'
+import { ClipboardList, Plus, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { InventoryDetailClient } from './[id]/inventory-detail-client'
 
-export default async function InventarioPage() {
+export default async function InventarioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>
+}) {
+  const { view } = await searchParams
+
+  if (view) {
+    const inventory = await getInventoryById(view)
+
+    if (!inventory) notFound()
+
+    const initialInventory = {
+      id: inventory.id,
+      code: inventory.code,
+      status: inventory.status,
+      notes: inventory.notes,
+      userName: inventory.user.name ?? 'Usuário',
+      createdAt: inventory.createdAt.toISOString(),
+      completedAt: inventory.completedAt?.toISOString() ?? null,
+      items: inventory.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product.name,
+        productSku: item.product.sku,
+        baseUnitLabel: item.product.baseUnit?.unitOfMeasure.abbreviation ?? item.product.baseUnitName,
+        systemStock: Number(item.systemStock),
+        countedStock: Number(item.countedStock),
+        difference: Number(item.difference),
+        justification: item.justification,
+      })),
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Link href="/estoque/inventario" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-sm font-medium text-muted-foreground">Detalhes do inventário</h1>
+          </div>
+        </div>
+
+        <InventoryDetailClient initialInventory={initialInventory} />
+      </div>
+    )
+  }
+
   const { inventories } = await getInventories()
 
   return (
@@ -55,7 +106,7 @@ export default async function InventarioPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      href={`/estoque/inventario/${inv.id}`}
+                      href={`/estoque/inventario?view=${inv.id}`}
                       className="text-primary hover:underline text-xs"
                     >
                       Ver

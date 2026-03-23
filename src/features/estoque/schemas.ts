@@ -52,6 +52,10 @@ export const inventoryItemSchema = z.object({
     .min(5, 'Justificativa é obrigatória (mín. 5 caracteres)'),
 })
 
+export const updateInventoryItemSchema = inventoryItemSchema.omit({
+  productId: true,
+})
+
 export const createInventorySchema = z.object({
   notes: z.string().max(500).optional(),
   items: z.array(inventoryItemSchema).min(1, 'Adicione pelo menos 1 item'),
