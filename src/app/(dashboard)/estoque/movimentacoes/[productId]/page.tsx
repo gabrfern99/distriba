@@ -44,7 +44,7 @@ export default async function ProductMovementsPage({
     return `/estoque/movimentacoes/${productId}${parts.length ? `?${parts.join('&')}` : ''}`
   }
 
-  const unitLabel = product.baseUnit?.unitOfMeasure?.abbreviation ?? ''
+  const unitLabel = product.baseUnit?.unitOfMeasure?.abbreviation ?? product.baseUnitName
 
   return (
     <div className="space-y-6">
@@ -216,7 +216,7 @@ export default async function ProductMovementsPage({
                       {m.type === 'EXIT' ? '-' : '+'}{formatDecimal(m.quantity.toString(), 2)}
                     </span>{' '}
                     <span className="text-xs text-muted-foreground font-normal">
-                      {m.product.baseUnit?.unitOfMeasure?.abbreviation ?? ''}
+                      {unitLabel}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">
@@ -225,10 +225,12 @@ export default async function ProductMovementsPage({
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-right text-muted-foreground hidden sm:table-cell">
-                    {formatDecimal(m.previousStock.toString(), 2)}
+                    {formatDecimal(m.previousStock.toString(), 2)}{' '}
+                    <span className="text-xs">{unitLabel}</span>
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {formatDecimal(m.newStock.toString(), 2)}
+                    {formatDecimal(m.newStock.toString(), 2)}{' '}
+                    <span className="text-xs text-muted-foreground font-normal">{unitLabel}</span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">
                     {m.user.name}

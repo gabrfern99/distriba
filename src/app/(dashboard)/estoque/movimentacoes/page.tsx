@@ -70,6 +70,7 @@ export default async function MovimentacoesPage({
             <tbody className="divide-y divide-border">
               {productsWithMovements.map((p) => {
                 const lastMov = p.stockMovements[0]
+                const unitAbbr = p.baseUnit?.unitOfMeasure?.abbreviation ?? p.baseUnitName
                 return (
                   <tr key={p.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3">
@@ -79,7 +80,7 @@ export default async function MovimentacoesPage({
                     <td className="px-4 py-3 text-right font-medium">
                       {formatDecimal(p.currentStock.toString(), 2)}{' '}
                       <span className="text-xs text-muted-foreground font-normal">
-                        {p.baseUnit?.unitOfMeasure?.abbreviation ?? ''}
+                        {unitAbbr}
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
@@ -103,7 +104,8 @@ export default async function MovimentacoesPage({
                     <td className="px-4 py-3 text-right font-medium hidden sm:table-cell">
                       {lastMov && (
                         <>
-                          {lastMov.type === 'EXIT' ? '-' : '+'}{formatDecimal(lastMov.quantity.toString(), 2)}
+                          {lastMov.type === 'EXIT' ? '-' : '+'}{formatDecimal(lastMov.quantity.toString(), 2)}{' '}
+                          <span className="text-xs text-muted-foreground font-normal">{unitAbbr}</span>
                         </>
                       )}
                     </td>
