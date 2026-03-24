@@ -12,5 +12,5 @@ export default async function RootPage() {
     redirect('/superadmin')
   }
 
-  redirect('/dashboard')
+  redirect('/estoque')
 }
