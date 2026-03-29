@@ -109,7 +109,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
   const positiveCount = inventory.items.filter((item) => item.difference > 0).length
   const negativeCount = inventory.items.filter((item) => item.difference < 0).length
   const shouldSearchProducts =
-    inventory.status === 'OPEN' && !selectedProduct && addSearch.trim().length >= 2
+    inventory.status === 'OPEN' && !selectedProduct && addSearch.trim().length >= 1
 
   useEffect(() => {
     if (!shouldSearchProducts) {
@@ -354,7 +354,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
                     const value = e.target.value
                     setAddSearch(value)
                     setSelectedProduct(null)
-                    if (value.trim().length >= 2) {
+                    if (value.trim().length >= 1) {
                       setSearchingProducts(true)
                     } else {
                       setSearchingProducts(false)
@@ -373,7 +373,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
                   )}
                 </div>
               )}
-              {!selectedProduct && addSearch.trim().length >= 2 && (
+              {!selectedProduct && addSearch.trim().length >= 1 && (
                 <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border shadow-sm">
                   {addResults.map((product) => (
                     <button

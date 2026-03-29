@@ -34,10 +34,6 @@ interface EditProductTabsProps {
 export function EditProductTabs({ product, units }: EditProductTabsProps) {
   const [activeTab, setActiveTab] = useState<'general' | 'units'>('general')
 
-  const baseUnitLabel = product.baseUnit
-    ? product.baseUnit.unitOfMeasure.abbreviation
-    : null
-
   return (
     <div className="space-y-6">
       {/* Tab navigation */}
@@ -73,7 +69,7 @@ export function EditProductTabs({ product, units }: EditProductTabsProps) {
 
       {/* Tab content */}
       {activeTab === 'general' ? (
-        <GeneralDataForm product={product} baseUnitLabel={baseUnitLabel} />
+        <GeneralDataForm product={product} />
       ) : (
         <UnitsTab product={product} units={units} />
       )}

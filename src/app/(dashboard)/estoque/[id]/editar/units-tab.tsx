@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { addProductUnit, removeProductUnit, setBaseUnit } from '@/features/estoque/actions'
+import { addProductUnit, removeProductUnit, setBaseUnit, updateMinStock } from '@/features/estoque/actions'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -22,6 +22,7 @@ interface ProductUnit {
 interface UnitsTabProps {
   product: {
     id: string
+    minStock: number
     baseUnitId: string | null
     productUnits: ProductUnit[]
   }
@@ -38,6 +39,12 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
 
   // Base unit select
   const [settingBase, setSettingBase] = useState(false)
+
+  // Min stock
+  const [minStockValue, setMinStockValue] = useState(
+    product.minStock > 0 ? String(product.minStock) : '',
+  )
+  const [savingMinStock, setSavingMinStock] = useState(false)
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
@@ -65,6 +72,19 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
     }
   }
 
+  async function handleSaveMinStock() {
+    setSavingMinStock(true)
+    const value = parseFloat(minStockValue) || 0
+    const result = await updateMinStock(product.id, value)
+    setSavingMinStock(false)
+    if (result.error) {
+      toast(result.error, 'error')
+    } else {
+      toast('Estoque mínimo atualizado!')
+      router.refresh()
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return
     setDeleting(true)
@@ -84,29 +104,62 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Base unit select */}
+      {/* Base unit select + min stock */}
       {product.productUnits.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-foreground">Unidade base</label>
-          <div className="flex gap-2 items-center">
-            <select
-              value={product.baseUnitId ?? ''}
-              onChange={(e) => {
-                if (e.target.value) handleSetBaseUnit(e.target.value)
-              }}
-              disabled={settingBase}
-              className="flex h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-            >
-              <option value="">Selecione a unidade base...</option>
-              {product.productUnits.map((pu) => (
-                <option key={pu.id} value={pu.id}>
-                  {pu.unitOfMeasure.name} ({pu.unitOfMeasure.abbreviation})
-                </option>
-              ))}
-            </select>
-            {settingBase && (
-              <span className="text-xs text-muted-foreground">Salvando...</span>
-            )}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="text-sm font-medium text-foreground">Unidade base</label>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={product.baseUnitId ?? ''}
+                  onChange={(e) => {
+                    if (e.target.value) handleSetBaseUnit(e.target.value)
+                  }}
+                  disabled={settingBase}
+                  className="flex h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <option value="">Selecione a unidade base...</option>
+                  {product.productUnits.map((pu) => (
+                    <option key={pu.id} value={pu.id}>
+                      {pu.unitOfMeasure.name} ({pu.unitOfMeasure.abbreviation})
+                    </option>
+                  ))}
+                </select>
+                {settingBase && (
+                  <span className="text-xs text-muted-foreground">Salvando...</span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 w-full sm:w-48">
+              <label className="text-sm font-medium text-foreground">
+                Estoque mínimo
+                {product.baseUnitId && (() => {
+                  const base = product.productUnits.find((pu) => pu.id === product.baseUnitId)
+                  return base ? ` (${base.unitOfMeasure.abbreviation})` : ''
+                })()}
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={minStockValue}
+                  onChange={(e) => setMinStockValue(e.target.value)}
+                  placeholder="0"
+                  className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSaveMinStock}
+                  loading={savingMinStock}
+                  className="shrink-0 h-9"
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">
             A unidade base é usada como referência para estoque mínimo e conversões.
@@ -217,7 +270,6 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
                 min="0"
                 label="Preço de venda (R$)"
                 placeholder="0,00"
-                defaultValue="0"
               />
             </div>
             <Button type="submit" loading={addPending} className="shrink-0">

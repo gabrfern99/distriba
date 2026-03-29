@@ -131,7 +131,6 @@ export async function updateProductGeneral(
     name: formData.get('name'),
     sku: formData.get('sku'),
     description: formData.get('description') || undefined,
-    minStock: formData.get('minStock'),
   }
 
   const parsed = updateProductGeneralSchema.safeParse(raw)
@@ -234,6 +233,24 @@ export async function setBaseUnit(productId: string, baseUnitId: string) {
   await prisma.product.update({
     where: { id: productId },
     data: { baseUnitId },
+  })
+
+  updateTag('products')
+  return { success: true }
+}
+
+export async function updateMinStock(productId: string, minStock: number) {
+  const session = await requireTenantAuth()
+  const tenantId = session.user.tenantId
+
+  const product = await prisma.product.findFirst({ where: { id: productId, tenantId } })
+  if (!product) return { error: 'Produto não encontrado' }
+
+  if (minStock < 0) return { error: 'Estoque mínimo não pode ser negativo' }
+
+  await prisma.product.update({
+    where: { id: productId },
+    data: { minStock },
   })
 
   updateTag('products')
@@ -584,7 +601,7 @@ export async function searchInventoryProducts(query: string) {
   const tenantId = session.user.tenantId
   const normalizedQuery = query.trim()
 
-  if (normalizedQuery.length < 2) {
+  if (normalizedQuery.length < 1) {
     return { products: [] }
   }
 

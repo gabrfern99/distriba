@@ -61,7 +61,7 @@ export function InventoryForm({ products }: { products: Product[] }) {
         productName: product.name,
         productSku: product.sku,
         systemStock: product.currentStock,
-        countedStock: String(product.currentStock),
+        countedStock: '',
         justification: '',
       },
     ])
@@ -155,6 +155,7 @@ export function InventoryForm({ products }: { products: Product[] }) {
                           min="0"
                           value={item.countedStock}
                           onChange={(e) => updateItem(i, 'countedStock', e.target.value)}
+                          placeholder="Qtd"
                           className="h-8 w-28 rounded-md border border-border bg-background px-2 text-sm text-right focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                         />
                         {item.countedStock !== '' && diff !== 0 && (

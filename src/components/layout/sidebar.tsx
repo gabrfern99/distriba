@@ -52,16 +52,16 @@ const allNavItems: NavItem[] = [
   //     { label: 'Nova Venda (PDV)', href: '/vendas/nova' },
   //   ],
   // },
-  // {
-  //   label: 'Compras',
-  //   icon: ShoppingBag,
-  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-  //   children: [
-  //     { label: 'Pedidos de Compra', href: '/compras' },
-  //     { label: 'Novo Pedido', href: '/compras/novo' },
-  //     { label: 'Fornecedores', href: '/compras/fornecedores' },
-  //   ],
-  // },
+  //  {
+  //    label: 'Compras',
+  //    icon: ShoppingBag,
+  //    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+  //    children: [
+  //      { label: 'Pedidos de Compra', href: '/compras' },
+  //      { label: 'Novo Pedido', href: '/compras/novo' },
+  //      { label: 'Fornecedores', href: '/compras/fornecedores' },
+  //    ],
+  //  },
   // {
   //   label: 'Configurações',
   //   icon: Settings,

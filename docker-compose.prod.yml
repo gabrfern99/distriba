@@ -1,16 +1,13 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      network: host
+    image: ghcr.io/gabrfern99/distriba:latest
     ports:
       - '3000:3000'
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/distribuidora
-      - AUTH_SECRET=supersecret-change-in-production
-      - AUTH_URL=https://noop.tail617ede.ts.net/
-      - COSMOS_API_TOKEN=KZpxzMef-dp5QH5uvSs5Dw
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=${AUTH_URL}
+      - COSMOS_API_TOKEN=${COSMOS_API_TOKEN}
     depends_on:
       db:
         condition: service_healthy

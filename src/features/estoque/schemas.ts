@@ -11,7 +11,6 @@ export const updateProductGeneralSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(200),
   sku: z.string().min(1, 'SKU é obrigatório').max(50),
   description: z.string().max(500).optional(),
-  minStock: z.coerce.number().min(0).default(0),
 })
 
 export const addProductUnitSchema = z.object({
@@ -47,9 +46,7 @@ export const createMovementSchema = z.object({
 export const inventoryItemSchema = z.object({
   productId: z.string().min(1),
   countedStock: z.coerce.number().min(0),
-  justification: z
-    .string()
-    .min(5, 'Justificativa é obrigatória (mín. 5 caracteres)'),
+  justification: z.string().max(500).optional().default(''),
 })
 
 export const updateInventoryItemSchema = inventoryItemSchema.omit({

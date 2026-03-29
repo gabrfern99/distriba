@@ -15,12 +15,10 @@ interface GeneralDataFormProps {
     name: string
     sku: string
     description: string | null
-    minStock: number
   }
-  baseUnitLabel: string | null
 }
 
-export function GeneralDataForm({ product, baseUnitLabel }: GeneralDataFormProps) {
+export function GeneralDataForm({ product }: GeneralDataFormProps) {
   const { toast } = useToast()
   const action = updateProductGeneral.bind(null, product.id)
   const [state, formAction, isPending] = useActionState(action, null)
@@ -66,15 +64,6 @@ export function GeneralDataForm({ product, baseUnitLabel }: GeneralDataFormProps
             <BarcodeScanner onScan={(code) => setSku(code)} />
           </div>
         </div>
-        <Input
-          id="minStock"
-          name="minStock"
-          type="number"
-          step="0.01"
-          min="0"
-          label={`Estoque mínimo${baseUnitLabel ? ` (${baseUnitLabel})` : ''}`}
-          defaultValue={String(product.minStock)}
-        />
       </div>
 
       <Textarea
