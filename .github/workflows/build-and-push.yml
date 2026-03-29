@@ -69,7 +69,9 @@ jobs:
             docker compose -f docker-compose.yml down 2>/dev/null || true
 
             # Pull latest repo changes (gets updated docker-compose.prod.yml, prisma, etc.)
+            git stash || true
             git pull origin main || true
+            git stash pop || true
 
             # Ensure .env has all required vars (add missing ones, don't overwrite existing)
             touch .env
