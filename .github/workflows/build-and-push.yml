@@ -1,3 +1,4 @@
+# CI/CD: Build on GitHub, deploy to remote via SSH
 name: Build, Push and Deploy
 
 on:
