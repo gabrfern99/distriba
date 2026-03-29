@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build, Push and Deploy
 
 on:
   push:
@@ -47,3 +47,36 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to remote server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 129.148.46.20
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/distriba
+
+            # Copy docker-compose.prod.yml from repo if not present or update it
+            # (the file is managed via git pull below)
+
+            # Pull latest repo changes (to get updated docker-compose.prod.yml, prisma, etc.)
+            git pull origin main || true
+
+            # Login to GHCR
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u gabrfern99 --password-stdin
+
+            # Pull latest image and restart using prod compose
+            docker compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Clean old images
+            docker image prune -f
