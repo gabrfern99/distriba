@@ -3,10 +3,11 @@ services:
     image: ghcr.io/gabrfern99/distriba:latest
     ports:
       - '3000:3000'
-    env_file:
-      - .env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/distribuidora
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=${AUTH_URL}
+      - COSMOS_API_TOKEN=${COSMOS_API_TOKEN}
     depends_on:
       db:
         condition: service_healthy

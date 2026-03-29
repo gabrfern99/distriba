@@ -65,16 +65,22 @@ jobs:
           script: |
             cd ~/distriba
 
-            # Copy docker-compose.prod.yml from repo if not present or update it
-            # (the file is managed via git pull below)
+            # Stop old build-based containers (first time only, harmless if already stopped)
+            docker compose -f docker-compose.yml down 2>/dev/null || true
 
-            # Pull latest repo changes (to get updated docker-compose.prod.yml, prisma, etc.)
+            # Pull latest repo changes (gets updated docker-compose.prod.yml, prisma, etc.)
             git pull origin main || true
+
+            # Ensure .env has all required vars (add missing ones, don't overwrite existing)
+            touch .env
+            grep -q "^AUTH_SECRET=" .env || echo 'AUTH_SECRET=supersecret-change-in-production' >> .env
+            grep -q "^AUTH_URL=" .env || echo 'AUTH_URL=https://distriba.quiropatecnologia.com.br/' >> .env
+            grep -q "^COSMOS_API_TOKEN=" .env || echo 'COSMOS_API_TOKEN=KZpxzMef-dp5QH5uvSs5Dw' >> .env
 
             # Login to GHCR
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u gabrfern99 --password-stdin
 
-            # Pull latest image and restart using prod compose
+            # Pull latest image and restart
             docker compose -f docker-compose.prod.yml pull app
             docker compose -f docker-compose.prod.yml up -d
 
