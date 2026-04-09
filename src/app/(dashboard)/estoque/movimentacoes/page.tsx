@@ -3,6 +3,7 @@ import { getProducts } from '@/features/estoque/actions'
 import { formatDateTime, formatDecimal, serializeProduct } from '@/lib/utils'
 import { MOVEMENT_TYPE_LABELS, MOVEMENT_ORIGIN_LABELS } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
+import { Pagination } from '@/components/shared/pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ArrowUpDown, Eye } from 'lucide-react'
 import Link from 'next/link'
@@ -133,23 +134,11 @@ export default async function MovimentacoesPage({
         </div>
       )}
 
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: pages }, (_, i) => i + 1).map((pg) => (
-            <Link
-              key={pg}
-              href={buildHref({ page: String(pg) })}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${
-                currentPage === pg
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border hover:bg-muted'
-              }`}
-            >
-              {pg}
-            </Link>
-          ))}
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pages}
+        buildHref={(p) => buildHref({ page: p > 1 ? String(p) : undefined })}
+      />
     </div>
   )
 }

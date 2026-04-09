@@ -25,13 +25,13 @@ export async function getSales(search?: string, status?: string, page = 1) {
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
-      skip: (page - 1) * 50,
+      take: 10,
+      skip: (page - 1) * 10,
     }),
     prisma.sale.count({ where }),
   ])
 
-  return { sales, total, pages: Math.ceil(total / 50) }
+  return { sales, total, pages: Math.ceil(total / 10) }
 }
 
 export async function getSaleById(id: string) {

@@ -63,13 +63,13 @@ export async function getProducts(
       where,
       include,
       orderBy: { name: 'asc' },
-      take: 50,
-      skip: (page - 1) * 50,
+      take: 10,
+      skip: (page - 1) * 10,
     }),
     prisma.product.count({ where }),
   ])
 
-  return { products, total, pages: Math.ceil(total / 50) }
+  return { products, total, pages: Math.ceil(total / 10) }
 }
 
 export async function getProductById(id: string) {
@@ -111,11 +111,34 @@ export async function createProduct(
     return { error: 'Já existe um produto com este SKU' }
   }
 
-  const created = await prisma.product.create({
-    data: { ...parsed.data, tenantId },
+  const created = await prisma.$transaction(async (tx) => {
+    const product = await tx.product.create({
+      data: { ...parsed.data, tenantId },
+    })
+
+    let unUnit = await tx.unitOfMeasure.findFirst({
+      where: { tenantId, abbreviation: 'un' },
+    })
+    if (!unUnit) {
+      unUnit = await tx.unitOfMeasure.create({
+        data: { name: 'Unidade', abbreviation: 'un', tenantId },
+      })
+    }
+
+    await tx.productUnit.create({
+      data: {
+        productId: product.id,
+        unitOfMeasureId: unUnit.id,
+        conversionFactor: 1,
+        salePrice: 0,
+      },
+    })
+
+    return product
   })
 
   updateTag('products')
+  updateTag('units')
   return { success: true, productId: created.id }
 }
 
@@ -212,6 +235,27 @@ export async function removeProductUnit(productUnitId: string) {
       })
     }
     await tx.productUnit.delete({ where: { id: productUnitId } })
+  })
+
+  updateTag('products')
+  return { success: true }
+}
+
+export async function updateProductUnitPrice(productUnitId: string, salePrice: number) {
+  const session = await requireTenantAuth()
+  const tenantId = session.user.tenantId
+
+  const pu = await prisma.productUnit.findFirst({
+    where: { id: productUnitId },
+    include: { product: { select: { tenantId: true } } },
+  })
+  if (!pu || pu.product.tenantId !== tenantId) return { error: 'Unidade não encontrada' }
+
+  if (salePrice < 0) return { error: 'Preço de venda não pode ser negativo' }
+
+  await prisma.productUnit.update({
+    where: { id: productUnitId },
+    data: { salePrice },
   })
 
   updateTag('products')
@@ -380,7 +424,7 @@ export async function deleteUnit(id: string) {
 export async function getProductsWithLastMovement(
   search?: string,
   page = 1,
-  perPage = 50,
+  perPage = 10,
 ) {
   const session = await requireTenantAuth()
   const tenantId = session.user.tenantId
@@ -409,14 +453,20 @@ export async function getProductsWithLastMovement(
           include: { user: { select: { name: true } } },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { updatedAt: 'desc' },
       take: perPage,
       skip: (page - 1) * perPage,
     }),
     prisma.product.count({ where }),
   ])
 
-  return { products, total, pages: Math.ceil(total / perPage) }
+  const sorted = [...products].sort((a, b) => {
+    const aDate = a.stockMovements[0]?.createdAt ?? new Date(0)
+    const bDate = b.stockMovements[0]?.createdAt ?? new Date(0)
+    return new Date(bDate).getTime() - new Date(aDate).getTime()
+  })
+
+  return { products: sorted, total, pages: Math.ceil(total / perPage) }
 }
 
 export async function getMovements(
@@ -553,13 +603,13 @@ export async function getInventories(page = 1) {
         _count: { select: { items: true } },
       },
       orderBy: { createdAt: 'desc' },
-      take: 50,
-      skip: (page - 1) * 50,
+      take: 10,
+      skip: (page - 1) * 10,
     }),
     prisma.inventory.count({ where }),
   ])
 
-  return { inventories, total, pages: Math.ceil(total / 50) }
+  return { inventories, total, pages: Math.ceil(total / 10) }
 }
 
 export async function getInventoryById(id: string) {

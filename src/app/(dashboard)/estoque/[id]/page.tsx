@@ -35,7 +35,7 @@ export default async function ProductViewPage({
     : null
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

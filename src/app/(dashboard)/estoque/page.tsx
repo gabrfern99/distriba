@@ -2,6 +2,7 @@ import { getProducts } from '@/features/estoque/actions'
 import { formatDecimal } from '@/lib/utils'
 import { isLowStock, getStockEquivalents } from '@/features/estoque/utils'
 import { Badge } from '@/components/ui/badge'
+import { Pagination } from '@/components/shared/pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { Package, Plus, AlertTriangle, Search } from 'lucide-react'
 import Link from 'next/link'
@@ -228,23 +229,11 @@ export default async function EstoquePage({
         </div>
       )}
 
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-            <Link
-              key={p}
-              href={`/estoque?page=${p}${q ? `&q=${q}` : ''}${lowStockOnly ? '&low=1' : ''}${status ? `&status=${status}` : ''}`}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${
-                Number(page) === p || (!page && p === 1)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border hover:bg-muted'
-              }`}
-            >
-              {p}
-            </Link>
-          ))}
-        </div>
-      )}
+      <Pagination
+        currentPage={Number(page) || 1}
+        totalPages={pages}
+        buildHref={(p) => buildHref({ page: p > 1 ? String(p) : undefined })}
+      />
     </div>
   )
 }

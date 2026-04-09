@@ -2,9 +2,11 @@ import { getPurchaseOrders } from '@/features/compras/actions'
 import { getSuppliers } from '@/features/compras/actions'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { PurchaseOrderStatusBadge } from '@/components/shared/status-badge'
+import { Pagination } from '@/components/shared/pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ShoppingBag, Plus } from 'lucide-react'
 import Link from 'next/link'
+import { ComprasPdfButton } from './compras-pdf-button'
 
 export default async function ComprasPage({
   searchParams,
@@ -12,9 +14,10 @@ export default async function ComprasPage({
   searchParams: Promise<{ status?: string; supplierId?: string; page?: string }>
 }) {
   const { status, supplierId, page } = await searchParams
-  const [{ orders, total }, { suppliers }] = await Promise.all([
-    getPurchaseOrders(supplierId, status, Number(page) || 1),
-    getSuppliers(),
+  const currentPage = Number(page) || 1
+  const [{ orders, total, pages }, { suppliers }] = await Promise.all([
+    getPurchaseOrders(supplierId, status, currentPage),
+    getSuppliers(undefined, 1, 500),
   ])
 
   return (
@@ -70,7 +73,8 @@ export default async function ComprasPage({
                 <th className="text-left px-4 py-3 font-medium">Código</th>
                 <th className="text-left px-4 py-3 font-medium">Fornecedor</th>
                 <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-right px-4 py-3 font-medium">Total</th>
+                <th className="text-right px-4 py-3 font-medium">Itens</th>
+                <th className="text-right px-4 py-3 font-medium">Valor</th>
                 <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Data</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -83,6 +87,9 @@ export default async function ComprasPage({
                   <td className="px-4 py-3">
                     <PurchaseOrderStatusBadge status={order.status} />
                   </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">
+                    {order._count.items}
+                  </td>
                   <td className="px-4 py-3 text-right font-medium">
                     {formatCurrency(order.totalAmount.toString())}
                   </td>
@@ -90,9 +97,14 @@ export default async function ComprasPage({
                     {formatDateTime(order.createdAt)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/compras/${order.id}`} className="text-primary hover:underline text-xs">
-                      Ver
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      {order.status === 'COMPLETED' && (
+                        <ComprasPdfButton orderId={order.id} />
+                      )}
+                      <Link href={`/compras/${order.id}`} className="text-primary hover:underline text-xs">
+                        Ver
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -100,6 +112,19 @@ export default async function ComprasPage({
           </table>
         </div>
       )}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pages}
+        buildHref={(p) => {
+          const params = new URLSearchParams()
+          if (supplierId) params.set('supplierId', supplierId)
+          if (status) params.set('status', status)
+          if (p > 1) params.set('page', String(p))
+          const qs = params.toString()
+          return `/compras${qs ? `?${qs}` : ''}`
+        }}
+      />
     </div>
   )
 }

@@ -11,7 +11,7 @@ export default async function NovoPedidoPage() {
   const products = rawProducts.map(serializeProduct)
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold">Novo Pedido de Compra</h1>
       <PurchaseOrderForm suppliers={suppliers} products={products} />
     </div>

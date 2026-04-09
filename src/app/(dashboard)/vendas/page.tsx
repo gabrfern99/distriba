@@ -1,6 +1,7 @@
 import { getSales } from '@/features/vendas/actions'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { SaleStatusBadge } from '@/components/shared/status-badge'
+import { Pagination } from '@/components/shared/pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ShoppingCart, Plus } from 'lucide-react'
 import Link from 'next/link'
@@ -11,7 +12,8 @@ export default async function VendasPage({
   searchParams: Promise<{ q?: string; status?: string; page?: string }>
 }) {
   const { q, status, page } = await searchParams
-  const { sales, total, pages } = await getSales(q, status, Number(page) || 1)
+  const currentPage = Number(page) || 1
+  const { sales, total, pages } = await getSales(q, status, currentPage)
 
   return (
     <div className="space-y-6">
@@ -102,6 +104,19 @@ export default async function VendasPage({
           </table>
         </div>
       )}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pages}
+        buildHref={(p) => {
+          const params = new URLSearchParams()
+          if (q) params.set('q', q)
+          if (status) params.set('status', status)
+          if (p > 1) params.set('page', String(p))
+          const qs = params.toString()
+          return `/vendas${qs ? `?${qs}` : ''}`
+        }}
+      />
     </div>
   )
 }

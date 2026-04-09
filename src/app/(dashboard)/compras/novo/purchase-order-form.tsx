@@ -72,8 +72,12 @@ export function PurchaseOrderForm({
   }, [state])
 
   useEffect(() => {
-    if (currentProduct) {
-      setSelectedUnit({ name: currentProduct.baseUnitName, conversionFactor: 1 })
+    if (currentProduct && currentProduct.productUnits.length > 0) {
+      const firstUnit = currentProduct.productUnits[0]
+      setSelectedUnit({
+        name: firstUnit.unitOfMeasure.name,
+        conversionFactor: parseFloat(firstUnit.conversionFactor.toString()),
+      })
     }
   }, [selectedProduct])
 
@@ -82,6 +86,7 @@ export function PurchaseOrderForm({
     const qty = parseFloat(quantity)
     const price = parseFloat(unitPrice)
     if (qty <= 0 || isNaN(qty)) { toast('Quantidade inválida', 'error'); return }
+    if (isNaN(price) || price < 0) { toast('Preço inválido', 'error'); return }
 
     setItems((prev) => [
       ...prev,
@@ -102,18 +107,14 @@ export function PurchaseOrderForm({
 
   function handleUnitChange(value: string) {
     if (!currentProduct) return
-    if (value === '__base__') {
-      setSelectedUnit({ name: currentProduct.baseUnitName, conversionFactor: 1 })
-    } else {
-      const pu = currentProduct.productUnits.find(
-        (u) => u.unitOfMeasure.abbreviation === value,
-      )
-      if (pu) {
-        setSelectedUnit({
-          name: pu.unitOfMeasure.name,
-          conversionFactor: parseFloat(pu.conversionFactor.toString()),
-        })
-      }
+    const pu = currentProduct.productUnits.find(
+      (u) => u.unitOfMeasure.abbreviation === value,
+    )
+    if (pu) {
+      setSelectedUnit({
+        name: pu.unitOfMeasure.name,
+        conversionFactor: parseFloat(pu.conversionFactor.toString()),
+      })
     }
   }
 
@@ -146,13 +147,13 @@ export function PurchaseOrderForm({
               searchPlaceholder="Pesquisar por nome ou SKU..."
             />
 
-            {currentProduct && (
+            {currentProduct && currentProduct.productUnits.length > 0 && (
               <Select
                 id="unit"
                 label="Unidade de compra"
+                value={currentProduct.productUnits.find((pu) => pu.unitOfMeasure.name === selectedUnit.name)?.unitOfMeasure.abbreviation ?? currentProduct.productUnits[0]?.unitOfMeasure.abbreviation}
                 onChange={(e) => handleUnitChange(e.target.value)}
               >
-                <option value="__base__">{currentProduct.baseUnitName} (unidade base)</option>
                 {currentProduct.productUnits.map((pu) => (
                   <option key={pu.unitOfMeasure.abbreviation} value={pu.unitOfMeasure.abbreviation}>
                     {pu.unitOfMeasure.name} (1 {pu.unitOfMeasure.abbreviation} = {parseFloat(pu.conversionFactor.toString())} {currentProduct.baseUnitName})

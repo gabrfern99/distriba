@@ -2,6 +2,7 @@ import { getInventories } from '@/features/estoque/actions'
 import { getInventoryById } from '@/features/estoque/actions'
 import { formatDateTime } from '@/lib/utils'
 import { InventoryStatusBadge } from '@/components/shared/status-badge'
+import { Pagination } from '@/components/shared/pagination'
 import { EmptyState } from '@/components/shared/empty-state'
 import { ClipboardList, Plus, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -11,9 +12,9 @@ import { InventoryDetailClient } from './[id]/inventory-detail-client'
 export default async function InventarioPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>
+  searchParams: Promise<{ view?: string; page?: string }>
 }) {
-  const { view } = await searchParams
+  const { view, page } = await searchParams
 
   if (view) {
     const inventory = await getInventoryById(view)
@@ -57,7 +58,8 @@ export default async function InventarioPage({
     )
   }
 
-  const { inventories } = await getInventories()
+  const currentPage = Number(page) || 1
+  const { inventories, total, pages } = await getInventories(currentPage)
 
   return (
     <div className="space-y-6">
@@ -118,6 +120,12 @@ export default async function InventarioPage({
           </table>
         </div>
       )}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={pages}
+        buildHref={(p) => `/estoque/inventario${p > 1 ? `?page=${p}` : ''}`}
+      />
     </div>
   )
 }

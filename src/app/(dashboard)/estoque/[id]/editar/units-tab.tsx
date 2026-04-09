@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
-import { addProductUnit, removeProductUnit, setBaseUnit, updateMinStock } from '@/features/estoque/actions'
+import { addProductUnit, removeProductUnit, setBaseUnit, updateMinStock, updateProductUnitPrice } from '@/features/estoque/actions'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -46,6 +46,12 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
   )
   const [savingMinStock, setSavingMinStock] = useState(false)
 
+  // Sale prices – always-visible inputs
+  const [prices, setPrices] = useState<Record<string, string>>(
+    Object.fromEntries(product.productUnits.map((pu) => [pu.id, String(pu.salePrice)])),
+  )
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null)
+
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -81,6 +87,28 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
       toast(result.error, 'error')
     } else {
       toast('Estoque mínimo atualizado!')
+      router.refresh()
+    }
+  }
+
+  async function handleSavePrice(puId: string) {
+    const raw = prices[puId]
+    const value = parseFloat(raw)
+    const original = product.productUnits.find((pu) => pu.id === puId)
+    if (!original || value === original.salePrice) return
+    if (isNaN(value) || value < 0) {
+      toast('Preço inválido', 'error')
+      setPrices((prev) => ({ ...prev, [puId]: String(original.salePrice) }))
+      return
+    }
+    setSavingPriceId(puId)
+    const result = await updateProductUnitPrice(puId, value)
+    setSavingPriceId(null)
+    if (result.error) {
+      toast(result.error, 'error')
+      setPrices((prev) => ({ ...prev, [puId]: String(original.salePrice) }))
+    } else {
+      toast('Preço de venda atualizado!')
       router.refresh()
     }
   }
@@ -192,7 +220,24 @@ export function UnitsTab({ product, units }: UnitsTabProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">{pu.conversionFactor}</td>
-                  <td className="px-4 py-3 text-right">{formatCurrency(pu.salePrice)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-xs text-muted-foreground">R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={prices[pu.id] ?? ''}
+                        onChange={(e) => setPrices((prev) => ({ ...prev, [pu.id]: e.target.value }))}
+                        onBlur={() => handleSavePrice(pu.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                        }}
+                        disabled={savingPriceId === pu.id}
+                        className="h-8 w-28 rounded-md border border-border bg-background px-2 text-right text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+                      />
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"

@@ -62,33 +62,6 @@ export function CreateProductForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="name" className="text-sm font-medium text-foreground">
-              Nome do produto *
-              {lookingUp && (
-                <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground font-normal">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Buscando...
-                </span>
-              )}
-              {!lookingUp && filledByCosmos && (
-                <span className="ml-2 text-xs text-emerald-600 font-normal">
-                  ✓ Cosmos Bluesoft
-                </span>
-              )}
-            </label>
-            <input
-              id="name"
-              name="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="Nome do produto"
-              className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-          </div>
-        </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="sku" className="text-sm font-medium text-foreground">
             SKU / Código de barras *
@@ -120,6 +93,33 @@ export function CreateProductForm() {
             <option value="true">Ativo</option>
             <option value="false">Inativo</option>
           </select>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="name" className="text-sm font-medium text-foreground">
+              Nome do produto *
+              {lookingUp && (
+                <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground font-normal">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Buscando...
+                </span>
+              )}
+              {!lookingUp && filledByCosmos && (
+                <span className="ml-2 text-xs text-emerald-600 font-normal">
+                  ✓ Cosmos Bluesoft
+                </span>
+              )}
+            </label>
+            <input
+              id="name"
+              name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Nome do produto"
+              className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
         </div>
       </div>
 

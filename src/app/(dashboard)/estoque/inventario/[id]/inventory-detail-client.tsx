@@ -14,8 +14,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
+import { ClientPagination } from '@/components/shared/pagination'
 import { formatDateTime, formatDecimal } from '@/lib/utils'
 import { Search } from 'lucide-react'
+
+const ITEMS_PER_PAGE = 10
 
 type DifferenceFilter = 'all' | 'changed' | 'same' | 'positive' | 'negative'
 
@@ -68,6 +71,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
   const [inventory, setInventory] = useState(initialInventory)
   const [search, setSearch] = useState('')
   const [differenceFilter, setDifferenceFilter] = useState<DifferenceFilter>('all')
+  const [itemsPage, setItemsPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftCountedStock, setDraftCountedStock] = useState('')
   const [draftJustification, setDraftJustification] = useState('')
@@ -80,7 +84,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
   const [addResults, setAddResults] = useState<InventoryProductOption[]>([])
   const [selectedProduct, setSelectedProduct] = useState<InventoryProductOption | null>(null)
   const [addCountedStock, setAddCountedStock] = useState('')
-  const [addJustification, setAddJustification] = useState('Contagem inicial')
+  const [addJustification, setAddJustification] = useState('')
   const [searchingProducts, setSearchingProducts] = useState(false)
   const [adding, setAdding] = useState(false)
 
@@ -104,6 +108,12 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
 
     return matchesSearch && matchesDifference
   })
+
+  const totalItemPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE)
+  const paginatedItems = filteredItems.slice(
+    (itemsPage - 1) * ITEMS_PER_PAGE,
+    itemsPage * ITEMS_PER_PAGE,
+  )
 
   const differenceCount = inventory.items.filter((item) => item.difference !== 0).length
   const positiveCount = inventory.items.filter((item) => item.difference > 0).length
@@ -303,7 +313,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
             </Button>
           ) : (
             <Badge variant="success" className="px-3 py-1.5">
-              Estoque já conciliado
+              Estoque já processado
             </Badge>
           )}
         </div>
@@ -443,7 +453,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setItemsPage(1) }}
             placeholder="Filtrar por nome do produto ou SKU..."
             className="flex h-9 w-full rounded-md border border-border bg-background py-1 pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
@@ -452,7 +462,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
         <div className="w-full lg:w-64">
           <Select
             value={differenceFilter}
-            onChange={(e) => setDifferenceFilter(e.target.value as DifferenceFilter)}
+            onChange={(e) => { setDifferenceFilter(e.target.value as DifferenceFilter); setItemsPage(1) }}
           >
             <option value="all">Todos os itens</option>
             <option value="changed">Com divergência</option>
@@ -477,14 +487,14 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filteredItems.length === 0 ? (
+            {paginatedItems.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   Nenhum item encontrado com os filtros atuais.
                 </td>
               </tr>
             ) : (
-              filteredItems.map((item) => {
+              paginatedItems.map((item) => {
                 const isEditing = editingId === item.id
                 const parsedDraftCountedStock = Number.parseFloat(draftCountedStock.replace(',', '.'))
                 const previewDifference =
@@ -579,6 +589,12 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
           </tbody>
         </table>
       </div>
+
+      <ClientPagination
+        currentPage={itemsPage}
+        totalPages={totalItemPages}
+        onPageChange={setItemsPage}
+      />
 
       <ConfirmDialog
         open={!!deleteTarget}
