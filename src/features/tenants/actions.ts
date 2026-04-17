@@ -1,9 +1,9 @@
 'use server'
 
-import { updateTag } from 'next/cache'
+import { updateTag, revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
-import { requireSuperAdmin } from '@/lib/auth'
+import { requireSuperAdmin, requireTenantAuth } from '@/lib/auth'
 import { createTenantSchema, updateTenantSchema } from './schemas'
 
 export async function getTenants(search?: string, page = 1) {
@@ -162,6 +162,28 @@ export async function updateTenant(
   })
 
   updateTag('tenants')
+  return { success: true }
+}
+
+export async function updateCompanySettings(
+  _prevState: { error?: string; success?: boolean } | null,
+  formData: FormData,
+) {
+  const session = await requireTenantAuth()
+  const tenantId = session.user.tenantId
+
+  const name = (formData.get('name') as string | null)?.trim()
+  if (!name || name.length < 2) return { error: 'Nome deve ter pelo menos 2 caracteres' }
+  if (name.length > 200) return { error: 'Nome muito longo' }
+
+  const logoUrl = (formData.get('logoUrl') as string | null) || null
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { name, logoUrl },
+  })
+
+  revalidatePath('/', 'layout')
   return { success: true }
 }
 

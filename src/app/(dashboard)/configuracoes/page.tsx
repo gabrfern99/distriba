@@ -9,6 +9,7 @@ export default async function ConfiguracoesPage() {
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.user.tenantId },
+    select: { id: true, name: true, logoUrl: true },
   })
 
   if (!tenant) redirect('/login')

@@ -9,12 +9,13 @@ export default async function NovoInventarioPage() {
     id: p.id,
     name: p.name,
     sku: p.sku,
-    baseUnitName: p.baseUnitName,
+    baseUnitLabel: p.baseUnit?.unitOfMeasure.abbreviation ?? p.baseUnitName,
+    conversionFactor: Number(p.baseUnit?.conversionFactor ?? 1),
     currentStock: Number(p.currentStock),
   }))
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link href="/estoque/inventario" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />

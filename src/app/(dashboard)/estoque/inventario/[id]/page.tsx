@@ -28,6 +28,7 @@ export default async function InventoryDetailPage({
       productName: item.product.name,
       productSku: item.product.sku,
       baseUnitLabel: item.product.baseUnit?.unitOfMeasure.abbreviation ?? item.product.baseUnitName,
+      conversionFactor: Number(item.product.baseUnit?.conversionFactor ?? 1),
       systemStock: Number(item.systemStock),
       countedStock: Number(item.countedStock),
       difference: Number(item.difference),

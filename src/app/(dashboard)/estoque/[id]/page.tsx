@@ -28,11 +28,14 @@ export default async function ProductViewPage({
 
   const baseStock = Number(product.currentStock)
   const low = isLowStock(baseStock, Number(product.minStock))
-  const equivalents = getStockEquivalents(baseStock, product.productUnits)
-
-  const baseUnitLabel = product.baseUnit
-    ? product.baseUnit.unitOfMeasure.abbreviation
-    : null
+  const absUnit = product.productUnits.find((pu) => Number(pu.conversionFactor) === 1)
+  const baseUnitLabel = absUnit?.unitOfMeasure.abbreviation
+    ?? product.baseUnit?.unitOfMeasure?.abbreviation
+    ?? null
+  const equivalents = getStockEquivalents(
+    baseStock,
+    product.productUnits.filter((pu) => Number(pu.conversionFactor) !== 1),
+  )
 
   return (
     <div className="space-y-8">
@@ -173,9 +176,13 @@ export default async function ProductViewPage({
                         {MOVEMENT_ORIGIN_LABELS[m.origin as keyof typeof MOVEMENT_ORIGIN_LABELS]}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {m.type === 'EXIT' ? '-' : '+'}{formatDecimal(m.quantity.toString(), 2)}{' '}
+                        {m.type === 'EXIT' ? '-' : '+'}
+                        {formatDecimal(
+                          (m.unitQuantity != null ? Number(m.unitQuantity) : Number(m.quantity)).toString(),
+                          2,
+                        )}{' '}
                         <span className="text-xs text-muted-foreground">
-                          {m.product.baseUnit?.unitOfMeasure?.abbreviation ?? ''}
+                          {m.unitName ?? baseUnitLabel ?? ''}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">

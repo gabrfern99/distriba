@@ -43,15 +43,15 @@ const allNavItems: NavItem[] = [
       { label: 'Unidades', href: '/estoque/unidades' },
     ],
   },
-  // {
-  //   label: 'Vendas',
-  //   icon: ShoppingCart,
-  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-  //   children: [
-  //     { label: 'Lista de Vendas', href: '/vendas' },
-  //     { label: 'Nova Venda (PDV)', href: '/vendas/nova' },
-  //   ],
-  // },
+  {
+    label: 'Vendas',
+    icon: ShoppingCart,
+    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+    children: [
+      { label: 'Lista de Vendas', href: '/vendas' },
+      { label: 'Nova Venda (PDV)', href: '/vendas/nova' },
+    ],
+  },
    {
      label: 'Compras',
      icon: ShoppingBag,
@@ -62,23 +62,23 @@ const allNavItems: NavItem[] = [
        { label: 'Fornecedores', href: '/compras/fornecedores' },
      ],
    },
-  // {
-  //   label: 'Configurações',
-  //   icon: Settings,
-  //   roles: ['OWNER', 'ADMIN', 'OPERATOR'],
-  //   children: [
-  //     { label: 'Empresa', href: '/configuracoes' },
-  //     { label: 'Meu Perfil', href: '/configuracoes/perfil' },
-  //     { label: 'Usuários', href: '/configuracoes/usuarios' },
-  //   ],
-  // },
+  {
+    label: 'Configurações',
+    icon: Settings,
+    roles: ['OWNER', 'ADMIN', 'OPERATOR'],
+    children: [
+      { label: 'Empresa', href: '/configuracoes' },
+      { label: 'Meu Perfil', href: '/configuracoes/perfil' },
+      { label: 'Usuários', href: '/configuracoes/usuarios' },
+    ],
+  },
 ]
 
 function getNavItems(tenantRole?: string): NavItem[] {
   return allNavItems.filter((item) => !item.roles || (tenantRole && item.roles.includes(tenantRole)))
 }
 
-export function Sidebar({ tenantRole }: { tenantRole?: string }) {
+export function Sidebar({ tenantRole, tenantName, tenantLogoUrl }: { tenantRole?: string; tenantName?: string; tenantLogoUrl?: string | null }) {
   const pathname = usePathname()
   const [openMenus, setOpenMenus] = useState<string[]>(['Estoque', 'Vendas', 'Compras'])
 
@@ -91,11 +91,18 @@ export function Sidebar({ tenantRole }: { tenantRole?: string }) {
   return (
     <aside className="hidden md:flex w-60 flex-col border-r border-border bg-sidebar h-screen sticky top-0 overflow-y-auto shrink-0">
       <div className="flex h-14 items-center px-5 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground text-xs font-bold">D</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0 overflow-hidden">
+            {tenantLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={tenantLogoUrl} alt="Logo" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-primary-foreground text-xs font-bold">
+                {(tenantName ?? 'D').charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
-          <span className="font-semibold text-foreground">Distribuidora</span>
+          <span className="font-semibold text-foreground truncate">{tenantName ?? 'Distribuidora'}</span>
         </div>
       </div>
 

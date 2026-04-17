@@ -2,12 +2,10 @@
 
 import { useActionState, useState, useEffect, useRef } from 'react'
 import { createSale, completeSale } from '@/features/vendas/actions'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDecimal } from '@/lib/utils'
-import { Trash2, Plus, Check, Search, ShoppingCart, Package, X } from 'lucide-react'
+import { Trash2, Check, Search, ShoppingCart, X, AlertTriangle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { BarcodeScanner } from '@/components/shared/barcode-scanner'
 import { useHardwareScanner } from '@/hooks/use-hardware-scanner'
@@ -31,35 +29,54 @@ interface Product {
   productUnits: ProductUnit[]
 }
 
+interface AvailableUnit {
+  id: string
+  name: string
+  abbreviation: string
+  conversionFactor: number
+  salePrice: number
+}
+
 interface CartItem {
   productId: string
   productName: string
   productSku: string
+  unitId: string
   unitName: string
   conversionFactor: number
   quantity: number
+  quantityStr: string
   unitPrice: number
+  unitPriceStr: string
   subtotal: number
+  availableUnits: AvailableUnit[]
+  baseUnitAbbr: string
 }
 
 export function PDV({ products }: { products: Product[] }) {
   const router = useRouter()
   const { toast } = useToast()
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const qtyInputRef = useRef<HTMLInputElement>(null)
+  const finalizeFormRef = useRef<HTMLFormElement>(null)
 
   const [cart, setCart] = useState<CartItem[]>([])
   const [search, setSearch] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [selectedUnit, setSelectedUnit] = useState<{ id: string; name: string; abbreviation: string; conversionFactor: number; salePrice: number } | null>(null)
-  const [quantity, setQuantity] = useState('1')
-  const [unitPrice, setUnitPrice] = useState('0')
   const [completing, setCompleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ index: number; name: string } | null>(null)
+  const [finalizeConfirm, setFinalizeConfirm] = useState(false)
 
   const [state, formAction, isPending] = useActionState(createSale, null)
 
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0)
+
+  const cartForSubmission = cart.map(({ productId, unitName, conversionFactor, quantity, unitPrice }) => ({
+    productId,
+    unitName,
+    conversionFactor,
+    quantity,
+    unitPrice,
+  }))
 
   useEffect(() => {
     if (state?.success && state.saleId) {
@@ -81,6 +98,49 @@ export function PDV({ products }: { products: Product[] }) {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Enter') return
+      if (finalizeConfirm || deleteConfirm !== null) return
+      if (cart.length === 0) return
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
+      e.preventDefault()
+      setFinalizeConfirm(true)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [finalizeConfirm, deleteConfirm, cart.length])
+
+  useEffect(() => {
+    if (deleteConfirm === null) return
+    const captured = deleteConfirm
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        setDeleteConfirm(null)
+        setCart((prev) => prev.filter((_, i) => i !== captured.index))
+      }
+      if (e.key === 'Escape') setDeleteConfirm(null)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [deleteConfirm])
+
+  useEffect(() => {
+    if (!finalizeConfirm) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        setFinalizeConfirm(false)
+        finalizeFormRef.current?.requestSubmit()
+      }
+      if (e.key === 'Escape') setFinalizeConfirm(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [finalizeConfirm])
 
   async function handleComplete(saleId: string) {
     setCompleting(true)
@@ -113,13 +173,16 @@ export function PDV({ products }: { products: Product[] }) {
   function handleSearchChange(value: string) {
     setSearch(value)
     setShowSuggestions(true)
-    if (!value) {
-      setSelectedProduct(null)
-    }
   }
 
   function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (finalizeConfirm || deleteConfirm !== null) return
     if (e.key === 'Enter') {
+      if (!search && cart.length > 0) {
+        searchInputRef.current?.blur()
+        setFinalizeConfirm(true)
+        return
+      }
       const exact = products.find((p) => p.sku.toLowerCase() === search.toLowerCase())
       if (exact) {
         selectProduct(exact)
@@ -127,9 +190,7 @@ export function PDV({ products }: { products: Product[] }) {
         selectProduct(suggestions[0])
       }
     }
-    if (e.key === 'Escape') {
-      setShowSuggestions(false)
-    }
+    if (e.key === 'Escape') setShowSuggestions(false)
   }
 
   function handleBarcodeScan(code: string) {
@@ -143,7 +204,7 @@ export function PDV({ products }: { products: Product[] }) {
     }
   }
 
-  function getBaseUnit(product: Product): { id: string; name: string; abbreviation: string; conversionFactor: number; salePrice: number } | null {
+  function getBaseUnit(product: Product): AvailableUnit | null {
     if (product.baseUnitId && product.baseUnit) {
       return {
         id: product.baseUnit.id,
@@ -167,138 +228,151 @@ export function PDV({ products }: { products: Product[] }) {
   }
 
   function selectProduct(product: Product) {
-    setSelectedProduct(product)
     const base = getBaseUnit(product)
-    setSelectedUnit(base)
-    setUnitPrice(base ? base.salePrice.toFixed(2) : Number(product.salePrice).toFixed(2))
-    setSearch(product.name)
-    setShowSuggestions(false)
-    setTimeout(() => qtyInputRef.current?.focus(), 50)
-  }
+    const availableUnits: AvailableUnit[] = product.productUnits.map((pu) => ({
+      id: pu.id,
+      name: pu.unitOfMeasure.name,
+      abbreviation: pu.unitOfMeasure.abbreviation,
+      conversionFactor: Number(pu.conversionFactor),
+      salePrice: Number(pu.salePrice),
+    }))
+    const price = base ? base.salePrice : Number(product.salePrice)
+    const baseUnitAbbr = base?.abbreviation ?? product.baseUnitName
 
-  function clearProduct() {
-    setSelectedProduct(null)
-    setSearch('')
-    setQuantity('1')
-    setUnitPrice('0')
-    setTimeout(() => searchInputRef.current?.focus(), 50)
-  }
-
-  function handleUnitChange(value: string) {
-    if (!selectedProduct) return
-    const pu = selectedProduct.productUnits.find((u) => u.id === value)
-    if (pu) {
-      const unit = {
-        id: pu.id,
-        name: pu.unitOfMeasure.name,
-        abbreviation: pu.unitOfMeasure.abbreviation,
-        conversionFactor: Number(pu.conversionFactor),
-        salePrice: Number(pu.salePrice),
-      }
-      setSelectedUnit(unit)
-      setUnitPrice(unit.salePrice.toFixed(2))
-    }
-  }
-
-  function addToCart() {
-    if (!selectedProduct) {
-      toast('Selecione um produto', 'error')
-      return
-    }
-    const qty = parseFloat(quantity)
-    const price = parseFloat(unitPrice)
-    if (qty <= 0 || isNaN(qty)) {
-      toast('Quantidade inválida', 'error')
-      return
-    }
     setCart((prev) => {
       const existingIdx = prev.findIndex(
-        (item) =>
-          item.productId === selectedProduct.id &&
-          item.unitName === (selectedUnit?.name ?? '') &&
-          item.unitPrice === price,
+        (item) => item.productId === product.id && item.unitId === (base?.id ?? ''),
       )
       if (existingIdx !== -1) {
         return prev.map((item, i) => {
           if (i !== existingIdx) return item
-          const newQty = item.quantity + qty
-          return { ...item, quantity: newQty, subtotal: Math.round(newQty * item.unitPrice * 100) / 100 }
+          const newQty = item.quantity + 1
+          return {
+            ...item,
+            quantity: newQty,
+            quantityStr: String(newQty),
+            subtotal: Math.round(newQty * item.unitPrice * 100) / 100,
+          }
         })
       }
       return [
         ...prev,
         {
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          productSku: selectedProduct.sku,
-          unitName: selectedUnit?.name ?? '',
-          conversionFactor: selectedUnit?.conversionFactor ?? 1,
-          quantity: qty,
+          productId: product.id,
+          productName: product.name,
+          productSku: product.sku,
+          unitId: base?.id ?? '',
+          unitName: base?.name ?? '',
+          conversionFactor: base?.conversionFactor ?? 1,
+          quantity: 1,
+          quantityStr: '1',
           unitPrice: price,
-          subtotal: Math.round(qty * price * 100) / 100,
+          unitPriceStr: price.toFixed(2),
+          subtotal: price,
+          availableUnits,
+          baseUnitAbbr,
         },
       ]
     })
-    clearProduct()
+
+    setSearch('')
+    setShowSuggestions(false)
+    setTimeout(() => searchInputRef.current?.focus(), 50)
   }
 
-  function handleAddKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') addToCart()
+  function updateCartItemUnit(index: number, unitId: string) {
+    setCart((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const unit = item.availableUnits.find((u) => u.id === unitId)
+        if (!unit) return item
+        return {
+          ...item,
+          unitId: unit.id,
+          unitName: unit.name,
+          conversionFactor: unit.conversionFactor,
+          unitPrice: unit.salePrice,
+          unitPriceStr: unit.salePrice.toFixed(2),
+          subtotal: Math.round(item.quantity * unit.salePrice * 100) / 100,
+        }
+      }),
+    )
   }
 
-  function removeFromCart(index: number) {
-    setCart((prev) => prev.filter((_, i) => i !== index))
+  function updateCartItemQty(index: number, str: string) {
+    setCart((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const qty = parseFloat(str) || 0
+        return {
+          ...item,
+          quantity: qty,
+          quantityStr: str,
+          subtotal: Math.round(qty * item.unitPrice * 100) / 100,
+        }
+      }),
+    )
   }
 
-  const stock = selectedProduct ? Number(selectedProduct.currentStock) : 0
+  function updateCartItemPrice(index: number, str: string) {
+    setCart((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        const price = parseFloat(str) || 0
+        return {
+          ...item,
+          unitPrice: price,
+          unitPriceStr: str,
+          subtotal: Math.round(item.quantity * price * 100) / 100,
+        }
+      }),
+    )
+  }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
-      {/* Left: product search + add panel */}
-      <div className="xl:col-span-2 space-y-4">
+    <div className="flex flex-col gap-4">
+      {/* Search panel */}
+      <div>
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold">Adicionar produto</h2>
+            <Search className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold">Buscar produto</h2>
             <span className="ml-auto text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">F2</span>
           </div>
 
-          {/* Search input */}
           <div className="relative">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="sku-search" className="text-sm font-medium text-foreground">
-                SKU / Nome do produto
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <input
-                    ref={searchInputRef}
-                    id="sku-search"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={() => setShowSuggestions(true)}
-                    placeholder="Escaneie ou digite nome/SKU..."
-                    autoFocus
-                    className="flex h-10 w-full rounded-md border border-border bg-background pl-9 pr-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                  {search && (
-                    <button
-                      type="button"
-                      onClick={clearProduct}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-                <BarcodeScanner onScan={handleBarcodeScan} />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  id="sku-search"
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Escaneie ou busque nome/SKU..."
+                  autoFocus
+                  className="flex h-10 w-full rounded-md border border-border bg-background pl-9 pr-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch('')
+                      setShowSuggestions(false)
+                      searchInputRef.current?.focus()
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
+              <BarcodeScanner onScan={handleBarcodeScan} />
             </div>
 
-            {/* Suggestions dropdown */}
-            {showSuggestions && search && !selectedProduct && suggestions.length > 0 && (
+            {showSuggestions && search && suggestions.length > 0 && (
               <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-background shadow-lg overflow-hidden">
                 {suggestions.map((p) => (
                   <button
@@ -323,197 +397,300 @@ export function PDV({ products }: { products: Product[] }) {
                 ))}
               </div>
             )}
-            {showSuggestions && search && !selectedProduct && suggestions.length === 0 && (
+            {showSuggestions && search && suggestions.length === 0 && (
               <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-background shadow-lg px-3 py-4 text-center text-sm text-muted-foreground">
                 Nenhum produto encontrado
               </div>
             )}
           </div>
 
-          {/* Selected product card */}
-          {selectedProduct && (
-            <div className="space-y-3">
-              <div className="flex items-start justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm">{selectedProduct.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{selectedProduct.sku}</div>
-                  <div className={`text-xs font-medium mt-1 ${stock <= 0 ? 'text-destructive' : 'text-green-700'}`}>
-                    Estoque: {formatDecimal(stock, 2)} {getBaseUnit(selectedProduct)?.abbreviation ?? selectedProduct.baseUnitName}
-                  </div>
-                </div>
-                <div className="text-right shrink-0 ml-3">
-                  <div className="text-base font-bold text-primary">
-                    {formatCurrency(Number(getBaseUnit(selectedProduct)?.salePrice ?? selectedProduct.salePrice))}
-                  </div>
-                </div>
-              </div>
-
-              {selectedProduct.productUnits.length > 0 && (
-                <Select
-                  id="unit"
-                  label="Unidade de venda"
-                  value={selectedUnit?.id ?? ''}
-                  onChange={(e) => handleUnitChange(e.target.value)}
-                >
-                  {selectedProduct.productUnits.map((pu) => {
-                    const isBase = pu.id === selectedProduct.baseUnitId
-                    const baseAbbr = getBaseUnit(selectedProduct)?.abbreviation ?? selectedProduct.baseUnitName
-                    return (
-                      <option key={pu.id} value={pu.id}>
-                        {pu.unitOfMeasure.name} ({pu.unitOfMeasure.abbreviation})
-                        {isBase
-                          ? ' · Base'
-                          : ` · 1 ${pu.unitOfMeasure.abbreviation} = ${Number(pu.conversionFactor)} ${baseAbbr}`}
-                      </option>
-                    )
-                  })}
-                </Select>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <Input
-                    ref={qtyInputRef}
-                    id="qty"
-                    label="Quantidade"
-                    type="number"
-                    step="0.001"
-                    min="0.001"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    onKeyDown={handleAddKeyDown}
-                  />
-                  {selectedUnit && selectedUnit.conversionFactor !== 1 && (
-                    <p className="text-xs text-muted-foreground px-0.5">
-                      = {parseFloat(((parseFloat(quantity) || 0) * selectedUnit.conversionFactor).toFixed(4))} {getBaseUnit(selectedProduct)?.abbreviation ?? selectedProduct.baseUnitName}
-                    </p>
-                  )}
-                </div>
-                <Input
-                  id="price"
-                  label="Preço unit. (R$)"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={unitPrice}
-                  onChange={(e) => setUnitPrice(e.target.value)}
-                  onKeyDown={handleAddKeyDown}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
-                <span>
-                  Subtotal
-                  {selectedUnit && selectedUnit.conversionFactor !== 1 && (
-                    <span className="ml-1 text-xs">
-                      ({parseFloat(((parseFloat(quantity) || 0) * selectedUnit.conversionFactor).toFixed(4))} {getBaseUnit(selectedProduct)?.abbreviation ?? selectedProduct.baseUnitName} em base)
-                    </span>
-                  )}
-                </span>
-                <span className="font-semibold text-foreground">
-                  {formatCurrency(Math.round((parseFloat(quantity) || 0) * (parseFloat(unitPrice) || 0) * 100) / 100)}
-                </span>
-              </div>
-
-              <Button onClick={addToCart} className="w-full" size="lg">
-                <Plus className="h-4 w-4" />
-                Adicionar ao pedido
-              </Button>
-            </div>
+          {cart.length > 0 && !search && (
+            <p className="text-xs text-muted-foreground text-center px-2 py-1.5 bg-muted/50 rounded-md">
+              Pressione{' '}
+              <kbd className="font-mono bg-background border border-border rounded px-1 py-0.5 text-xs">
+                Enter
+              </kbd>{' '}
+              com a busca vazia para finalizar a venda
+            </p>
           )}
         </div>
       </div>
 
-      {/* Right: cart */}
-      <div className="xl:col-span-3 space-y-4">
-        <div className="rounded-xl border border-border bg-card">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-            <ShoppingCart className="h-4 w-4 text-primary" />
+      {/* Cart */}
+      <div>
+        <div
+          className="rounded-xl border border-border bg-card flex flex-col overflow-hidden"
+          style={{ minHeight: '420px' }}
+        >
+          {/* Cart header — sticky so total + finalize stay visible while scrolling */}
+          <div className="sticky top-0 z-10 flex items-center gap-2 px-5 py-3 border-b border-border flex-shrink-0 bg-card">
+            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
             <h2 className="font-semibold">Carrinho</h2>
             {cart.length > 0 && (
-              <span className="ml-auto text-xs bg-primary text-primary-foreground rounded-full px-2 py-0.5 font-medium">
+              <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
                 {cart.length} item(s)
               </span>
             )}
-          </div>
-
-          {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-muted-foreground gap-2">
-              <ShoppingCart className="h-8 w-8 opacity-30" />
-              <p className="text-sm">Carrinho vazio</p>
-              <p className="text-xs opacity-70">Adicione produtos usando a busca ao lado</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40">
-                    <tr>
-                      <th className="text-left px-4 py-2.5 font-medium text-xs text-muted-foreground">Produto</th>
-                      <th className="text-center px-3 py-2.5 font-medium text-xs text-muted-foreground">Qtd</th>
-                      <th className="text-right px-3 py-2.5 font-medium text-xs text-muted-foreground">Preço</th>
-                      <th className="text-right px-3 py-2.5 font-medium text-xs text-muted-foreground">Subtotal</th>
-                      <th className="px-3 py-2.5 w-8" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {cart.map((item, i) => (
-                      <tr key={i} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-sm">{item.productName}</div>
-                          <div className="text-xs text-muted-foreground">{item.productSku} · {item.unitName}</div>
-                        </td>
-                        <td className="px-3 py-3 text-center text-sm font-mono">
-                          {formatDecimal(item.quantity, 3)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-sm">
-                          {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-sm font-semibold">
-                          {formatCurrency(item.subtotal)}
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(i)}
-                            className="text-muted-foreground hover:text-destructive transition-colors rounded-sm p-0.5"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="border-t border-border px-5 py-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Subtotal ({cart.length} item(s))</span>
-                  <span className="text-sm font-medium">{formatCurrency(total)}</span>
+            {cart.length > 0 && (
+              <div className="ml-auto flex items-center gap-4">
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider leading-none">Total</p>
+                  <p className="text-xl font-bold text-primary leading-tight">{formatCurrency(total)}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-base font-bold">Total</span>
-                  <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
-                </div>
-
-                <form action={formAction}>
-                  <input type="hidden" name="items" value={JSON.stringify(cart)} />
+                <form ref={finalizeFormRef} action={formAction}>
+                  <input type="hidden" name="items" value={JSON.stringify(cartForSubmission)} />
                   <Button
-                    type="submit"
-                    className="w-full"
-                    size="lg"
+                    type="button"
+                    size="sm"
+                    onClick={() => setFinalizeConfirm(true)}
                     loading={isPending || completing}
+                    className="gap-1.5"
                   >
-                    <Check className="h-4 w-4" />
-                    Finalizar venda — {formatCurrency(total)}
+                    <Check className="h-3.5 w-3.5" />
+                    Finalizar venda
                   </Button>
                 </form>
               </div>
-            </>
+            )}
+          </div>
+
+          {/* Cart body */}
+          {cart.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-14 text-muted-foreground gap-2">
+              <ShoppingCart className="h-8 w-8 opacity-30" />
+              <p className="text-sm">Carrinho vazio</p>
+              <p className="text-xs opacity-70">Escaneie ou busque um produto para adicionar</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 sticky top-0 z-10">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 font-medium text-xs text-muted-foreground">
+                      Produto
+                    </th>
+                    <th className="text-center px-3 py-2.5 font-medium text-xs text-muted-foreground">
+                      Unidade
+                    </th>
+                    <th className="text-center px-3 py-2.5 font-medium text-xs text-muted-foreground">
+                      Qtd
+                    </th>
+                    <th className="text-right px-3 py-2.5 font-medium text-xs text-muted-foreground">
+                      Preço Unit.
+                    </th>
+                    <th className="text-right px-3 py-2.5 font-medium text-xs text-muted-foreground">
+                      Subtotal
+                    </th>
+                    <th className="px-3 py-2.5 w-8" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {cart.map((item, i) => (
+                    <tr key={i} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <div className="font-medium text-sm leading-tight">{item.productName}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{item.productSku}</div>
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        {item.availableUnits.length > 1 ? (
+                          <select
+                            value={item.unitId}
+                            onChange={(e) => updateCartItemUnit(i, e.target.value)}
+                            className="text-xs border border-border rounded-md px-1.5 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-full min-w-[72px] max-w-[110px]"
+                          >
+                            {item.availableUnits.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.abbreviation}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{item.unitName || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          value={item.quantityStr}
+                          onChange={(e) => updateCartItemQty(i, e.target.value)}
+                          className="text-sm text-center border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-20 font-mono block mx-auto"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.unitPriceStr}
+                          onChange={(e) => updateCartItemPrice(i, e.target.value)}
+                          className="text-sm text-right border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-24 font-mono block ml-auto"
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-sm font-semibold whitespace-nowrap">
+                        {formatCurrency(item.subtotal)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirm({ index: i, name: item.productName })}
+                          className="text-muted-foreground hover:text-destructive transition-colors rounded-sm p-0.5"
+                          title="Remover item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
+
+          {/* Total footer — mobile only (sticky header handles desktop) */}
+          <div className="flex-shrink-0 border-t border-border px-5 py-4 bg-card sm:hidden">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                  Total a pagar
+                </p>
+                <p className="text-3xl font-bold text-primary leading-none mt-1">
+                  {formatCurrency(total)}
+                </p>
+                {cart.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {cart.length} item(s) · {cart.reduce((s, it) => s + it.quantity, 0).toFixed(0)} unid.
+                  </p>
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <form ref={finalizeFormRef} action={formAction}>
+                  <input
+                    type="hidden"
+                    name="items"
+                    value={JSON.stringify(cartForSubmission)}
+                  />
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={() => setFinalizeConfirm(true)}
+                    loading={isPending || completing}
+                    className="gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Finalizar venda
+                  </Button>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div className="relative z-10 rounded-xl border border-border bg-card shadow-xl p-6 max-w-sm w-full space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-destructive/10 p-2 shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Remover item</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Remover <strong>{deleteConfirm.name}</strong> do carrinho?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  const idx = deleteConfirm.index
+                  setDeleteConfirm(null)
+                  setCart((prev) => prev.filter((_, i) => i !== idx))
+                }}
+              >
+                Remover
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finalize confirmation modal */}
+      {finalizeConfirm && (() => {
+        const outOfStockItems = cart.filter(item => {
+          const product = products.find(p => p.id === item.productId)
+          if (!product) return false
+          return Number(product.currentStock) < item.quantity * item.conversionFactor
+        })
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={() => setFinalizeConfirm(false)}
+            />
+            <div className="relative z-10 rounded-xl border border-border bg-card shadow-xl p-6 max-w-sm w-full space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                  <Check className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Finalizar venda</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Confirmar venda de{' '}
+                    <strong className="text-foreground">{formatCurrency(total)}</strong> com{' '}
+                    {cart.length} item(s)?
+                  </p>
+                </div>
+              </div>
+
+              {outOfStockItems.length > 0 && (
+                <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 space-y-1.5">
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-medium">Estoque insuficiente</span>
+                  </div>
+                  <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 pl-6 list-disc">
+                    {outOfStockItems.map(item => (
+                      <li key={item.productId + item.unitId}>{item.productName}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 pl-6">
+                    O estoque ficará negativo. A venda será registrada mesmo assim.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setFinalizeConfirm(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    setFinalizeConfirm(false)
+                    finalizeFormRef.current?.requestSubmit()
+                  }}
+                  loading={isPending || completing}
+                >
+                  <Check className="h-4 w-4" />
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

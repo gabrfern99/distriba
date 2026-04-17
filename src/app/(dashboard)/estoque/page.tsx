@@ -11,10 +11,11 @@ import { ProductActions } from './product-actions'
 export default async function EstoquePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; low?: string; status?: string }>
+  searchParams: Promise<{ q?: string; page?: string; low?: string; status?: string; negative?: string }>
 }) {
-  const { q, page, low, status } = await searchParams
+  const { q, page, low, status, negative } = await searchParams
   const lowStockOnly = low === '1'
+  const negativeStockOnly = negative === '1'
   const statusFilter = (status as 'all' | 'active' | 'inactive') || 'active'
 
   const { products, total, pages } = await getProducts(
@@ -22,10 +23,11 @@ export default async function EstoquePage({
     Number(page) || 1,
     lowStockOnly,
     statusFilter,
+    negativeStockOnly,
   )
 
   const buildHref = (overrides: Record<string, string | undefined> = {}) => {
-    const p = { q, low, status, ...overrides }
+    const p = { q, low, status, negative, ...overrides }
     const parts = Object.entries(p)
       .filter(([, v]) => v !== undefined && v !== '')
       .map(([k, v]) => `${k}=${encodeURIComponent(v!)}`)
@@ -39,7 +41,9 @@ export default async function EstoquePage({
           <h1 className="text-2xl font-bold">Estoque</h1>
           <p className="text-muted-foreground text-sm">
             {total} produto(s){' '}
-            {lowStockOnly
+            {negativeStockOnly
+              ? 'com estoque negativo'
+              : lowStockOnly
               ? 'com estoque baixo'
               : statusFilter === 'inactive'
               ? 'inativo(s)'
@@ -61,6 +65,7 @@ export default async function EstoquePage({
       <div className="flex flex-col sm:flex-row gap-3">
         <form method="GET" className="flex gap-2 flex-1">
           {lowStockOnly && <input type="hidden" name="low" value="1" />}
+          {negativeStockOnly && <input type="hidden" name="negative" value="1" />}
           {status && <input type="hidden" name="status" value={status} />}
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -112,7 +117,7 @@ export default async function EstoquePage({
             Todos
           </Link>
           <Link
-            href={buildHref({ low: '1', status: 'active' })}
+            href={buildHref({ low: '1', negative: undefined, status: 'active' })}
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               lowStockOnly
                 ? 'bg-background text-destructive shadow-sm'
@@ -122,22 +127,41 @@ export default async function EstoquePage({
             <AlertTriangle className="h-3 w-3" />
             Estoque baixo
           </Link>
+          <Link
+            href={buildHref({ negative: '1', low: undefined, status: 'all' })}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              negativeStockOnly
+                ? 'bg-background text-destructive shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <AlertTriangle className="h-3 w-3" />
+            Estoque negativo
+          </Link>
         </div>
       </div>
 
       {products.length === 0 ? (
         <EmptyState
           icon={Package}
-          title={lowStockOnly ? 'Nenhum produto com estoque baixo' : 'Nenhum produto encontrado'}
+          title={
+            negativeStockOnly
+              ? 'Nenhum produto com estoque negativo'
+              : lowStockOnly
+              ? 'Nenhum produto com estoque baixo'
+              : 'Nenhum produto encontrado'
+          }
           description={
-            lowStockOnly
+            negativeStockOnly
+              ? 'Todos os produtos têm estoque zero ou positivo'
+              : lowStockOnly
               ? 'Todos os produtos estão com estoque adequado'
               : q
               ? 'Tente uma busca diferente'
               : 'Cadastre o primeiro produto'
           }
           action={
-            !q && !lowStockOnly ? (
+            !q && !lowStockOnly && !negativeStockOnly ? (
               <Link
                 href="/estoque/novo"
                 className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
@@ -165,10 +189,12 @@ export default async function EstoquePage({
               {products.map((product) => {
                 const low = isLowStock(product.currentStock.toString(), product.minStock.toString())
                 const baseStock = Number(product.currentStock)
-                const equivalents = getStockEquivalents(baseStock, product.productUnits)
-                const baseUnitLabel = product.baseUnit
-                  ? product.baseUnit.unitOfMeasure.abbreviation
-                  : ''
+                const absUnit = product.productUnits.find((pu) => Number(pu.conversionFactor) === 1)
+                const baseUnitLabel = absUnit?.unitOfMeasure.abbreviation ?? product.baseUnit?.unitOfMeasure?.abbreviation ?? ''
+                const equivalents = getStockEquivalents(
+                  baseStock,
+                  product.productUnits.filter((pu) => Number(pu.conversionFactor) !== 1),
+                )
                 return (
                   <tr key={product.id} className={`hover:bg-muted/20 transition-colors ${!product.isActive ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-3">
@@ -202,7 +228,7 @@ export default async function EstoquePage({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground hidden lg:table-cell">
-                      {formatDecimal(Number(product.minStock), 2)} {baseUnitLabel}
+                      {formatDecimal(Number(product.minStock), 2)} {absUnit?.unitOfMeasure.abbreviation ?? baseUnitLabel}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">

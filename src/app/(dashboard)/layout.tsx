@@ -21,12 +21,16 @@ export default async function DashboardLayout({
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.user.tenantId },
-    select: { name: true },
+    select: { name: true, logoUrl: true },
   })
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar tenantRole={session.user.tenantRole} />
+      <Sidebar
+        tenantRole={session.user.tenantRole}
+        tenantName={tenant?.name}
+        tenantLogoUrl={tenant?.logoUrl ?? null}
+      />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Header userName={session.user.name ?? ''} tenantName={tenant?.name} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

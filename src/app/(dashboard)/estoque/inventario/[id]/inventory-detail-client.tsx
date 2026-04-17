@@ -28,6 +28,7 @@ interface InventoryDetailItem {
   productName: string
   productSku: string
   baseUnitLabel: string
+  conversionFactor: number
   systemStock: number
   countedStock: number
   difference: number
@@ -50,6 +51,7 @@ interface InventoryProductOption {
   name: string
   sku: string
   baseUnitLabel: string
+  conversionFactor: number
   currentStock: number
   isActive: boolean
 }
@@ -148,7 +150,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
 
   function startEdit(item: InventoryDetailItem) {
     setEditingId(item.id)
-    setDraftCountedStock(String(item.countedStock))
+    setDraftCountedStock(String(item.countedStock / item.conversionFactor))
     setDraftJustification(item.justification)
   }
 
@@ -169,7 +171,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
   function handleSelectProduct(product: InventoryProductOption) {
     setSelectedProduct(product)
     setAddSearch(product.name)
-    setAddCountedStock(String(product.currentStock))
+    setAddCountedStock(String(product.currentStock / product.conversionFactor))
     setAddJustification('Contagem inicial')
     setAddResults([])
     setSearchingProducts(false)
@@ -377,7 +379,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
               </div>
               {selectedProduct && (
                 <div className="rounded-md border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                  {selectedProduct.sku} · Estoque atual {formatDecimal(selectedProduct.currentStock, 2)} ({selectedProduct.baseUnitLabel})
+                  {selectedProduct.sku} · Estoque atual {formatDecimal(selectedProduct.currentStock / selectedProduct.conversionFactor, 2)} ({selectedProduct.baseUnitLabel})
                   {!selectedProduct.isActive && (
                     <span className="ml-2 font-medium text-amber-700">Produto inativo</span>
                   )}
@@ -394,7 +396,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
                     >
                       <div className="font-medium">{product.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {product.sku} · Estoque: {formatDecimal(product.currentStock, 2)} ({product.baseUnitLabel})
+                        {product.sku} · Estoque: {formatDecimal(product.currentStock / product.conversionFactor, 2)} ({product.baseUnitLabel})
                         {!product.isActive && ' · Inativo'}
                       </div>
                     </button>
@@ -497,10 +499,11 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
               paginatedItems.map((item) => {
                 const isEditing = editingId === item.id
                 const parsedDraftCountedStock = Number.parseFloat(draftCountedStock.replace(',', '.'))
+                const systemStockDisplay = item.systemStock / item.conversionFactor
                 const previewDifference =
                   isEditing && Number.isFinite(parsedDraftCountedStock)
-                    ? parsedDraftCountedStock - item.systemStock
-                    : item.difference
+                    ? parsedDraftCountedStock - systemStockDisplay
+                    : item.difference / item.conversionFactor
                 const differenceMeta = getDifferenceMeta(previewDifference)
 
                 return (
@@ -515,7 +518,7 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
                       <Badge variant={differenceMeta.variant}>{differenceMeta.label}</Badge>
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">
-                      {formatDecimal(item.systemStock, 2)} ({item.baseUnitLabel})
+                      {formatDecimal(item.systemStock / item.conversionFactor, 2)} ({item.baseUnitLabel})
                     </td>
                     <td className="px-4 py-3 text-right">
                       {isEditing ? (
@@ -529,13 +532,13 @@ export function InventoryDetailClient({ initialInventory }: { initialInventory: 
                         />
                       ) : (
                         <span className="font-medium">
-                          {formatDecimal(item.countedStock, 2)} ({item.baseUnitLabel})
+                          {formatDecimal(item.countedStock / item.conversionFactor, 2)} ({item.baseUnitLabel})
                         </span>
                       )}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${differenceMeta.textClass}`}>
                       {previewDifference > 0 ? '+' : ''}
-                      {formatDecimal(previewDifference, 2)} ({item.baseUnitLabel})
+                      {formatDecimal(previewDifference, 3)} ({item.baseUnitLabel})
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (

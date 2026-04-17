@@ -4,7 +4,6 @@ import { updateTag } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { requireTenantAuth } from '@/lib/auth'
 import { generateCode } from '@/lib/utils'
-import { InsufficientStockError } from '@/lib/errors'
 import { createSaleSchema } from './schemas'
 
 export async function getSales(search?: string, status?: string, page = 1) {
@@ -135,28 +134,7 @@ export async function completeSale(saleId: string) {
       throw new Error('Venda inválida ou já processada')
     }
 
-    // Aggregate total baseQuantity per product (handles duplicate lines for same product)
-    const totalByProduct = new Map<string, { total: number; name: string }>()
-    for (const item of sale.items) {
-      const baseQty = parseFloat(item.baseQuantity.toString())
-      const existing = totalByProduct.get(item.productId)
-      if (existing) {
-        existing.total += baseQty
-      } else {
-        totalByProduct.set(item.productId, { total: baseQty, name: item.productName })
-      }
-    }
-
-    // Validate all products before touching any stock
-    for (const [productId, { total, name }] of totalByProduct) {
-      const product = await tx.product.findUniqueOrThrow({ where: { id: productId } })
-      const currentStock = parseFloat(product.currentStock.toString())
-      if (currentStock < total) {
-        throw new InsufficientStockError(name)
-      }
-    }
-
-    // Deduct stock and create movements
+    // Deduct stock and create movements (stock may go negative — allowed by design)
     for (const item of sale.items) {
       const product = await tx.product.findUniqueOrThrow({
         where: { id: item.productId },

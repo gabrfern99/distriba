@@ -44,7 +44,8 @@ export default async function ProductMovementsPage({
     return `/estoque/movimentacoes/${productId}${parts.length ? `?${parts.join('&')}` : ''}`
   }
 
-  const unitLabel = product.baseUnit?.unitOfMeasure?.abbreviation ?? product.baseUnitName
+  const absUnit = product.productUnits.find((pu) => Number(pu.conversionFactor) === 1)
+  const unitLabel = absUnit?.unitOfMeasure.abbreviation ?? product.baseUnit?.unitOfMeasure?.abbreviation ?? product.baseUnitName
 
   return (
     <div className="space-y-6">
@@ -65,6 +66,13 @@ export default async function ProductMovementsPage({
               <span className="font-medium text-foreground">
                 {formatDecimal(product.currentStock.toString(), 2)} {unitLabel}
               </span>
+              {product.productUnits
+                .filter((pu) => Number(pu.conversionFactor) !== 1)
+                .map((pu) => (
+                  <span key={pu.id} className="ml-1.5 text-xs text-muted-foreground">
+                    = {parseFloat((Number(product.currentStock) / Number(pu.conversionFactor)).toFixed(3))} {pu.unitOfMeasure.abbreviation}
+                  </span>
+                ))}
             </p>
           </div>
           <div className="text-right">
@@ -213,16 +221,24 @@ export default async function ProductMovementsPage({
                   </td>
                   <td className="px-4 py-3 text-right font-medium whitespace-nowrap">
                     <span className={m.type === 'EXIT' ? 'text-red-600' : 'text-green-600'}>
-                      {m.type === 'EXIT' ? '-' : '+'}{formatDecimal(m.quantity.toString(), 2)}
+                      {m.type === 'EXIT' ? '-' : '+'}
+                      {formatDecimal(
+                        (m.unitQuantity != null ? Number(m.unitQuantity) : Number(m.quantity)).toString(),
+                        2,
+                      )}
                     </span>{' '}
                     <span className="text-xs text-muted-foreground font-normal">
-                      {unitLabel}
+                      {m.unitName ?? unitLabel}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">
-                    {m.unitName && m.unitQuantity
-                      ? `${Number(m.unitQuantity)} ${m.unitName}`
-                      : '—'}
+                    {m.unitName && m.unitQuantity ? (
+                      <span>
+                        {Number(m.unitQuantity)} {m.unitName}
+                        {' = '}
+                        {formatDecimal(m.quantity.toString(), 2)} {unitLabel}
+                      </span>
+                    ) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right text-muted-foreground hidden sm:table-cell">
                     {formatDecimal(m.previousStock.toString(), 2)}{' '}

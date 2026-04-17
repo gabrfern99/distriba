@@ -1,51 +1,104 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
-import { updateTenant } from '@/features/tenants/actions'
+import { useActionState, useEffect, useRef, useState } from 'react'
+import { updateCompanySettings } from '@/features/tenants/actions'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { Upload, X } from 'lucide-react'
 
 interface Tenant {
   id: string
   name: string
-  slug: string
-  document: string | null
-  phone: string | null
-  email: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  zipCode: string | null
+  logoUrl: string | null
 }
 
 export function TenantConfigForm({ tenant }: { tenant: Tenant }) {
   const { toast } = useToast()
-  const action = updateTenant.bind(null, tenant.id)
-  const [state, formAction, isPending] = useActionState(action, null)
+  const [state, formAction, isPending] = useActionState(updateCompanySettings, null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(tenant.logoUrl)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const logoUrlInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (state?.success) toast('Dados da empresa atualizados!')
     if (state?.error) toast(state.error, 'error')
   }, [state])
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 500 * 1024) {
+      toast('A imagem deve ter no máximo 500 KB', 'error')
+      e.target.value = ''
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setLogoPreview(dataUrl)
+      if (logoUrlInputRef.current) logoUrlInputRef.current.value = dataUrl
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleRemoveLogo() {
+    setLogoPreview(null)
+    if (logoUrlInputRef.current) logoUrlInputRef.current.value = ''
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const initial = tenant.name.charAt(0).toUpperCase()
+
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <Input id="name" name="name" label="Nome da empresa *" defaultValue={tenant.name} required />
+    <form action={formAction} className="space-y-6">
+      <input ref={logoUrlInputRef} type="hidden" name="logoUrl" defaultValue={tenant.logoUrl ?? ''} />
+
+      {/* Logo */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Ícone / Logo da empresa</label>
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 rounded-xl border border-border bg-muted flex items-center justify-center overflow-hidden shrink-0">
+            {logoPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoPreview} alt="Logo" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-2xl font-bold text-muted-foreground">{initial}</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              {logoPreview ? 'Alterar imagem' : 'Enviar imagem'}
+            </button>
+            {logoPreview && (
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 text-destructive px-3 py-1.5 text-sm hover:bg-destructive/5 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                Remover
+              </button>
+            )}
+            <p className="text-xs text-muted-foreground">PNG, JPG ou SVG · máx. 500 KB</p>
+          </div>
         </div>
-        <Input id="slug" name="slug" label="Slug (URL)" defaultValue={tenant.slug} />
-        <Input id="document" name="document" label="CNPJ" defaultValue={tenant.document ?? ''} />
-        <Input id="phone" name="phone" label="Telefone" defaultValue={tenant.phone ?? ''} />
-        <Input id="email" name="email" type="email" label="E-mail" defaultValue={tenant.email ?? ''} />
-        <div className="sm:col-span-2">
-          <Input id="address" name="address" label="Endereço" defaultValue={tenant.address ?? ''} />
-        </div>
-        <Input id="city" name="city" label="Cidade" defaultValue={tenant.city ?? ''} />
-        <Input id="state" name="state" label="Estado (UF)" maxLength={2} defaultValue={tenant.state ?? ''} />
-        <Input id="zipCode" name="zipCode" label="CEP" defaultValue={tenant.zipCode ?? ''} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
+
+      {/* Name */}
+      <Input id="name" name="name" label="Nome da empresa *" defaultValue={tenant.name} required />
 
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
 

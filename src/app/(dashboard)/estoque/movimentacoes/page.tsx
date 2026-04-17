@@ -71,7 +71,8 @@ export default async function MovimentacoesPage({
             <tbody className="divide-y divide-border">
               {productsWithMovements.map((p) => {
                 const lastMov = p.stockMovements[0]
-                const unitAbbr = p.baseUnit?.unitOfMeasure?.abbreviation ?? p.baseUnitName
+                const absUnit = p.productUnits?.find((pu) => Number(pu.conversionFactor) === 1)
+                const unitAbbr = absUnit?.unitOfMeasure.abbreviation ?? p.baseUnit?.unitOfMeasure?.abbreviation ?? p.baseUnitName
                 return (
                   <tr key={p.id} className="hover:bg-muted/20">
                     <td className="px-4 py-3">
@@ -104,10 +105,26 @@ export default async function MovimentacoesPage({
                     </td>
                     <td className="px-4 py-3 text-right font-medium hidden sm:table-cell">
                       {lastMov && (
-                        <>
-                          {lastMov.type === 'EXIT' ? '-' : '+'}{formatDecimal(lastMov.quantity.toString(), 2)}{' '}
-                          <span className="text-xs text-muted-foreground font-normal">{unitAbbr}</span>
-                        </>
+                        <div className="inline-flex flex-col items-end">
+                          <span>
+                            {lastMov.type === 'EXIT' ? '-' : '+'}
+                            {formatDecimal(
+                              (lastMov.unitQuantity != null
+                                ? Number(lastMov.unitQuantity)
+                                : Number(lastMov.quantity)
+                              ).toString(),
+                              2,
+                            )}{' '}
+                            <span className="text-xs text-muted-foreground font-normal">
+                              {lastMov.unitName ?? unitAbbr}
+                            </span>
+                          </span>
+                          {lastMov.unitName && lastMov.unitQuantity != null && (
+                            <span className="text-xs text-muted-foreground font-normal">
+                              = {formatDecimal(Number(lastMov.quantity).toString(), 2)} {unitAbbr}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell">

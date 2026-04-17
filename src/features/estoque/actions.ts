@@ -23,6 +23,7 @@ export async function getProducts(
   page = 1,
   lowStockOnly = false,
   statusFilter?: 'all' | 'active' | 'inactive',
+  negativeStockOnly = false,
 ) {
   const session = await requireTenantAuth()
   const tenantId = session.user.tenantId
@@ -49,13 +50,20 @@ export async function getProducts(
   }
 
   if (lowStockOnly) {
-    const all = await prisma.product.findMany({
-      where,
-      include,
-      orderBy: { name: 'asc' },
-    })
+    const all = await prisma.product.findMany({ where, include, orderBy: { name: 'asc' } })
     const filtered = all.filter((p) => Number(p.currentStock) <= Number(p.minStock))
-    return { products: filtered, total: filtered.length, pages: 1 }
+    const total = filtered.length
+    const pages = Math.ceil(total / 10) || 1
+    return { products: filtered.slice((page - 1) * 10, page * 10), total, pages }
+  }
+
+  if (negativeStockOnly) {
+    const negWhere = { ...where, currentStock: { lt: 0 } }
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({ where: negWhere, include, orderBy: { name: 'asc' }, take: 10, skip: (page - 1) * 10 }),
+      prisma.product.count({ where: negWhere }),
+    ])
+    return { products, total, pages: Math.ceil(total / 10) || 1 }
   }
 
   const [products, total] = await Promise.all([
@@ -447,6 +455,7 @@ export async function getProductsWithLastMovement(
       where,
       include: {
         baseUnit: { include: { unitOfMeasure: true } },
+        productUnits: { include: { unitOfMeasure: true } },
         stockMovements: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -630,6 +639,7 @@ export async function getInventoryById(id: string) {
               baseUnitName: true,
               baseUnit: {
                 select: {
+                  conversionFactor: true,
                   unitOfMeasure: {
                     select: {
                       abbreviation: true,
@@ -672,6 +682,7 @@ export async function searchInventoryProducts(query: string) {
       baseUnitName: true,
       baseUnit: {
         select: {
+          conversionFactor: true,
           unitOfMeasure: {
             select: {
               abbreviation: true,
@@ -690,6 +701,7 @@ export async function searchInventoryProducts(query: string) {
       name: product.name,
       sku: product.sku,
       baseUnitLabel: product.baseUnit?.unitOfMeasure.abbreviation ?? product.baseUnitName,
+      conversionFactor: Number(product.baseUnit?.conversionFactor ?? 1),
       currentStock: Number(product.currentStock),
       isActive: product.isActive,
     })),
@@ -736,16 +748,19 @@ export async function createInventory(
     for (const item of parsed.data.items) {
       const product = await tx.product.findFirstOrThrow({
         where: { id: item.productId, tenantId },
+        include: { baseUnit: { select: { conversionFactor: true } } },
       })
+      const conversionFactor = Number(product.baseUnit?.conversionFactor ?? 1)
       const systemStock = parseFloat(product.currentStock.toString())
-      const difference = item.countedStock - systemStock
+      const absoluteCountedStock = item.countedStock * conversionFactor
+      const difference = absoluteCountedStock - systemStock
 
       await tx.inventoryItem.create({
         data: {
           inventoryId: inventory.id,
           productId: item.productId,
           systemStock,
-          countedStock: item.countedStock,
+          countedStock: absoluteCountedStock,
           difference,
           justification: item.justification,
         },
@@ -790,6 +805,7 @@ export async function addInventoryItem(
       baseUnitName: true,
       baseUnit: {
         select: {
+          conversionFactor: true,
           unitOfMeasure: {
             select: {
               abbreviation: true,
@@ -815,15 +831,17 @@ export async function addInventoryItem(
     return { error: 'Este produto já foi adicionado ao inventário' }
   }
 
+  const conversionFactor = Number(product.baseUnit?.conversionFactor ?? 1)
   const systemStock = Number(product.currentStock)
-  const difference = parsed.data.countedStock - systemStock
+  const absoluteCountedStock = parsed.data.countedStock * conversionFactor
+  const difference = absoluteCountedStock - systemStock
 
   const item = await prisma.inventoryItem.create({
     data: {
       inventoryId,
       productId: parsed.data.productId,
       systemStock,
-      countedStock: parsed.data.countedStock,
+      countedStock: absoluteCountedStock,
       difference,
       justification: parsed.data.justification,
     },
@@ -839,6 +857,7 @@ export async function addInventoryItem(
       productName: product.name,
       productSku: product.sku,
       baseUnitLabel: product.baseUnit?.unitOfMeasure.abbreviation ?? product.baseUnitName,
+      conversionFactor,
       systemStock: Number(item.systemStock),
       countedStock: Number(item.countedStock),
       difference: Number(item.difference),
@@ -874,6 +893,7 @@ export async function updateInventoryItem(
           baseUnitName: true,
           baseUnit: {
             select: {
+              conversionFactor: true,
               unitOfMeasure: {
                 select: {
                   abbreviation: true,
@@ -891,12 +911,14 @@ export async function updateInventoryItem(
     return { error: 'Apenas inventários em aberto podem ser editados' }
   }
 
-  const difference = parsed.data.countedStock - Number(item.systemStock)
+  const conversionFactor = Number(item.product.baseUnit?.conversionFactor ?? 1)
+  const absoluteCountedStock = parsed.data.countedStock * conversionFactor
+  const difference = absoluteCountedStock - Number(item.systemStock)
 
   const updated = await prisma.inventoryItem.update({
     where: { id: itemId },
     data: {
-      countedStock: parsed.data.countedStock,
+      countedStock: absoluteCountedStock,
       difference,
       justification: parsed.data.justification,
     },
@@ -912,6 +934,7 @@ export async function updateInventoryItem(
       productName: item.product.name,
       productSku: item.product.sku,
       baseUnitLabel: item.product.baseUnit?.unitOfMeasure.abbreviation ?? item.product.baseUnitName,
+      conversionFactor,
       systemStock: Number(updated.systemStock),
       countedStock: Number(updated.countedStock),
       difference: Number(updated.difference),

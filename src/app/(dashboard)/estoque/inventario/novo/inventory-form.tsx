@@ -14,7 +14,8 @@ interface Product {
   id: string
   name: string
   sku: string
-  baseUnitName: string
+  baseUnitLabel: string
+  conversionFactor: number
   currentStock: number
 }
 
@@ -22,6 +23,7 @@ interface InventoryItem {
   productId: string
   productName: string
   productSku: string
+  baseUnitLabel: string
   systemStock: number
   countedStock: string
   justification: string
@@ -60,7 +62,8 @@ export function InventoryForm({ products }: { products: Product[] }) {
         productId: product.id,
         productName: product.name,
         productSku: product.sku,
-        systemStock: product.currentStock,
+        baseUnitLabel: product.baseUnitLabel,
+        systemStock: product.currentStock / product.conversionFactor,
         countedStock: '',
         justification: '',
       },
@@ -112,7 +115,7 @@ export function InventoryForm({ products }: { products: Product[] }) {
               >
                 <div className="font-medium">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.sku} — Estoque: {formatDecimal(p.currentStock, 2)} {p.baseUnitName}
+                  {p.sku} — Estoque: {formatDecimal(p.currentStock / p.conversionFactor, 2)} {p.baseUnitLabel}
                 </div>
               </button>
             ))}
@@ -124,8 +127,8 @@ export function InventoryForm({ products }: { products: Product[] }) {
       </div>
 
       {items.length > 0 && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-lg border border-border overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left px-4 py-3 font-medium">Produto</th>
@@ -144,8 +147,9 @@ export function InventoryForm({ products }: { products: Product[] }) {
                       <div className="font-medium">{item.productName}</div>
                       <div className="text-xs text-muted-foreground">{item.productSku}</div>
                     </td>
-                    <td className="px-4 py-2 text-right text-muted-foreground">
-                      {formatDecimal(item.systemStock, 2)}
+                    <td className="px-4 py-2 text-right text-muted-foreground whitespace-nowrap">
+                      {formatDecimal(item.systemStock, 2)}{' '}
+                      <span className="text-xs">{item.baseUnitLabel}</span>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex flex-col items-end gap-0.5">

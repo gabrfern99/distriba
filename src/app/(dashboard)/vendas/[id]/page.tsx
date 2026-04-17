@@ -17,23 +17,31 @@ export default async function SaleDetailPage({
   if (!sale) notFound()
 
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Link href="/vendas" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Venda {sale.code}</h1>
-          <p className="text-sm text-muted-foreground">{formatDateTime(sale.createdAt)}</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Link href="/vendas" className="text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Venda {sale.code}</h1>
+            <p className="text-sm text-muted-foreground">{formatDateTime(sale.createdAt)}</p>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <SaleStatusBadge status={sale.status} />
-          <SaleActions saleId={sale.id} status={sale.status} />
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-muted/10 px-5 py-3 sm:flex-col sm:items-end sm:gap-1">
+          <div className="flex items-center gap-3">
+            <SaleStatusBadge status={sale.status} />
+            <SaleActions saleId={sale.id} status={sale.status} />
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Total da venda</p>
+            <p className="text-3xl font-bold text-primary">{formatCurrency(sale.totalAmount.toString())}</p>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-lg border border-border overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <thead className="bg-muted/50">
             <tr>
               <th className="text-left px-4 py-3 font-medium">Produto</th>
@@ -57,14 +65,6 @@ export default async function SaleDetailPage({
               </tr>
             ))}
           </tbody>
-          <tfoot className="border-t-2 border-border">
-            <tr>
-              <td colSpan={4} className="px-4 py-3 text-right font-bold">Total</td>
-              <td className="px-4 py-3 text-right font-bold text-primary">
-                {formatCurrency(sale.totalAmount.toString())}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 

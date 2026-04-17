@@ -28,9 +28,6 @@ export function Header({ userName, tenantName }: HeaderProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          {tenantName && (
-            <span className="hidden sm:block text-sm text-muted-foreground">{tenantName}</span>
-          )}
           <div className="flex items-center gap-2 text-sm">
             <User className="h-4 w-4 text-muted-foreground" />
             <span className="hidden sm:block">{userName}</span>
