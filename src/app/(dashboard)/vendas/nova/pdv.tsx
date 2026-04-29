@@ -5,7 +5,7 @@ import { createSale, completeSale } from '@/features/vendas/actions'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDecimal } from '@/lib/utils'
-import { Trash2, Check, Search, ShoppingCart, X, AlertTriangle } from 'lucide-react'
+import { Trash2, Check, Search, ShoppingCart, X, AlertTriangle, Minus, Plus, Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { BarcodeScanner } from '@/components/shared/barcode-scanner'
 import { useHardwareScanner } from '@/hooks/use-hardware-scanner'
@@ -53,7 +53,14 @@ interface CartItem {
   baseUnitAbbr: string
 }
 
-export function PDV({ products }: { products: Product[] }) {
+interface FeaturedProduct {
+  productId: string
+  name: string
+  sku: string
+  salePrice: number
+}
+
+export function PDV({ products, featuredProducts = [] }: { products: Product[]; featuredProducts?: FeaturedProduct[] }) {
   const router = useRouter()
   const { toast } = useToast()
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -150,7 +157,7 @@ export function PDV({ products }: { products: Product[] }) {
         toast(result.error, 'error')
       } else {
         toast('Venda concluída com sucesso!')
-        router.push('/vendas')
+        router.push(`/vendas/${saleId}`)
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao finalizar venda'
@@ -416,6 +423,34 @@ export function PDV({ products }: { products: Product[] }) {
         </div>
       </div>
 
+      {/* Featured quick-add */}
+      {featuredProducts.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="h-4 w-4 text-yellow-500" />
+            <h2 className="font-semibold text-sm">Destaques</h2>
+            <span className="text-xs text-muted-foreground">clique para adicionar</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {featuredProducts.map((fp) => {
+              const full = products.find((p) => p.id === fp.productId)
+              return (
+                <button
+                  key={fp.productId}
+                  type="button"
+                  onClick={() => full && selectProduct(full)}
+                  disabled={!full}
+                  className="flex flex-col items-start gap-0.5 rounded-lg border border-border bg-background hover:bg-muted hover:border-primary/40 transition-colors px-3 py-2 text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="text-xs font-medium leading-tight max-w-[120px] truncate">{fp.name}</span>
+                  <span className="text-[11px] text-primary font-semibold">{formatCurrency(fp.salePrice)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Cart */}
       <div>
         <div
@@ -509,14 +544,31 @@ export function PDV({ products }: { products: Product[] }) {
                         )}
                       </td>
                       <td className="px-3 py-2.5">
-                        <input
-                          type="number"
-                          step="0.001"
-                          min="0.001"
-                          value={item.quantityStr}
-                          onChange={(e) => updateCartItemQty(i, e.target.value)}
-                          className="text-sm text-center border border-border rounded-md px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-20 font-mono block mx-auto"
-                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateCartItemQty(i, String(Math.max(1, item.quantity - 1)))
+                            }
+                            className="h-7 w-7 rounded-md border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0.001"
+                            value={item.quantityStr}
+                            onChange={(e) => updateCartItemQty(i, e.target.value)}
+                            className="text-sm text-center border border-border rounded-md px-1 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring w-12 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateCartItemQty(i, String(item.quantity + 1))}
+                            className="h-7 w-7 rounded-md border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5">
                         <input

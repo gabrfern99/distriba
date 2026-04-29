@@ -106,6 +106,7 @@ export async function inviteUser(
   const parsed = inviteUserSchema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),
+    password: formData.get('password'),
     tenantRole: formData.get('tenantRole'),
   })
   if (!parsed.success) {
@@ -122,13 +123,11 @@ export async function inviteUser(
     return { error: 'Este e-mail já está cadastrado no sistema' }
   }
 
-  const tempPassword = `Temp@${Math.random().toString(36).slice(2, 10)}`
-
   await prisma.user.create({
     data: {
       name: parsed.data.name,
       email: parsed.data.email,
-      passwordHash: await bcrypt.hash(tempPassword, 12),
+      passwordHash: await bcrypt.hash(parsed.data.password, 12),
       globalRole: 'USER',
       tenantRole: parsed.data.tenantRole,
       tenantId,

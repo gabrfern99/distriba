@@ -83,7 +83,7 @@ export default async function ComprasPage({
               {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-muted/20">
                   <td className="px-4 py-3 font-mono">{order.code}</td>
-                  <td className="px-4 py-3">{order.supplier.name}</td>
+                  <td className="px-4 py-3">{order.supplier?.name ?? <span className="text-muted-foreground">—</span>}</td>
                   <td className="px-4 py-3">
                     <PurchaseOrderStatusBadge status={order.status} />
                   </td>

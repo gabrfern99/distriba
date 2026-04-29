@@ -122,9 +122,8 @@ export function PurchaseOrderForm({
     <div className="space-y-6">
       <form action={formAction} className="space-y-6">
         <Combobox
-          label="Fornecedor *"
+          label="Fornecedor (opcional)"
           name="supplierId"
-          required
           options={supplierOptions}
           value={selectedSupplier}
           onChange={setSelectedSupplier}

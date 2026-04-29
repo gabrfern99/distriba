@@ -21,6 +21,7 @@ model Product {
   saleItems      SaleItem[]
   purchaseItems  PurchaseOrderItem[]
   inventoryItems InventoryItem[]
+  featuredIn     FeaturedProduct[]
 
   @@unique([tenantId, sku])
   @@index([tenantId])

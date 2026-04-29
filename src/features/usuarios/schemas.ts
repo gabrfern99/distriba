@@ -17,8 +17,9 @@ export const changePasswordSchema = z
   })
 
 export const inviteUserSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('E-mail inválido'),
+  password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
   tenantRole: z.enum(['ADMIN', 'OPERATOR', 'STOCK_MANAGER']),
 })
 

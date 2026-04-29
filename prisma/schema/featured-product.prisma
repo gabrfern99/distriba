@@ -1,0 +1,14 @@
+model FeaturedProduct {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  position  Int
+  showInPdv Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, productId])
+  @@index([tenantId, position])
+  @@map("featured_products")
+}

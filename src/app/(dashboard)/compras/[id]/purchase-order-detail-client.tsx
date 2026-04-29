@@ -37,7 +37,7 @@ interface OrderDetail {
   id: string
   code: string
   status: 'DRAFT' | 'SENT' | 'COMPLETED' | 'CANCELLED'
-  supplierName: string
+  supplierName: string | null
   totalAmount: number
   notes: string | null
   createdAt: string
@@ -332,7 +332,7 @@ export function PurchaseOrderDetailClient({ initialOrder }: { initialOrder: Orde
             <PurchaseOrderStatusBadge status={order.status} />
           </div>
           <p className="text-sm text-muted-foreground">
-            Fornecedor: {order.supplierName} · Criado em {formatDateTime(order.createdAt)}
+            {order.supplierName ? `Fornecedor: ${order.supplierName} · ` : ''}Criado em {formatDateTime(order.createdAt)}
           </p>
           {order.sentAt && (
             <p className="text-sm text-muted-foreground">

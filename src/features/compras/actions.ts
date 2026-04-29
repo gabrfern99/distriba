@@ -212,10 +212,12 @@ export async function createPurchaseOrder(
     return { error: parsed.error.issues[0].message }
   }
 
-  const supplier = await prisma.supplier.findFirst({
-    where: { id: parsed.data.supplierId, tenantId },
-  })
-  if (!supplier) return { error: 'Fornecedor não encontrado' }
+  if (parsed.data.supplierId) {
+    const supplier = await prisma.supplier.findFirst({
+      where: { id: parsed.data.supplierId, tenantId },
+    })
+    if (!supplier) return { error: 'Fornecedor não encontrado' }
+  }
 
   const count = await prisma.purchaseOrder.count({ where: { tenantId } })
   const code = generateCode('PED', count)
@@ -228,7 +230,7 @@ export async function createPurchaseOrder(
   const order = await prisma.purchaseOrder.create({
     data: {
       code,
-      supplierId: parsed.data.supplierId,
+      supplierId: parsed.data.supplierId || undefined,
       totalAmount,
       notes: parsed.data.notes,
       tenantId,

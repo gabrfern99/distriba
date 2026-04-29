@@ -22,6 +22,7 @@ model Tenant {
   suppliers      Supplier[]
   stockMovements StockMovement[]
   inventories    Inventory[]
+  featuredProducts FeaturedProduct[]
 
   @@map("tenants")
 }

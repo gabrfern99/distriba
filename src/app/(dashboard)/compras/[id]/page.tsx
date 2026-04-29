@@ -18,7 +18,7 @@ export default async function PurchaseOrderDetailPage({
     id: order.id,
     code: order.code,
     status: order.status as 'DRAFT' | 'SENT' | 'COMPLETED' | 'CANCELLED',
-    supplierName: order.supplier.name,
+    supplierName: order.supplier?.name ?? null,
     totalAmount: Number(order.totalAmount),
     notes: order.notes,
     createdAt: order.createdAt.toISOString(),

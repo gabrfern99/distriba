@@ -2,8 +2,8 @@ model PurchaseOrder {
   id          String              @id @default(cuid())
   code        String
   status      PurchaseOrderStatus @default(DRAFT)
-  supplierId  String
-  supplier    Supplier            @relation(fields: [supplierId], references: [id])
+  supplierId  String?
+  supplier    Supplier?           @relation(fields: [supplierId], references: [id])
   totalAmount Decimal             @default(0) @db.Decimal(15, 2)
   notes       String?
   tenantId    String

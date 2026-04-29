@@ -70,6 +70,7 @@ const allNavItems: NavItem[] = [
       { label: 'Empresa', href: '/configuracoes' },
       { label: 'Meu Perfil', href: '/configuracoes/perfil' },
       { label: 'Usuários', href: '/configuracoes/usuarios' },
+      { label: 'Produtos em Destaque', href: '/configuracoes/produtos-mais-vendidos' },
     ],
   },
 ]

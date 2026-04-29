@@ -36,7 +36,7 @@ export function ComprasPdfButton({ orderId }: ComprasPdfButtonProps) {
 
       y += 8
       doc.setFontSize(10)
-      doc.text(`Fornecedor: ${order.supplier.name}`, marginL, y)
+      doc.text(`Fornecedor: ${order.supplier?.name ?? 'Não informado'}`, marginL, y)
 
       y += 6
       const createdDate = new Intl.DateTimeFormat('pt-BR', {

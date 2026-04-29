@@ -10,7 +10,7 @@ export const createSupplierSchema = z.object({
 })
 
 export const createPurchaseOrderSchema = z.object({
-  supplierId: z.string().min(1, 'Fornecedor é obrigatório'),
+  supplierId: z.string().optional().or(z.literal('')),
   items: z
     .array(
       z.object({
