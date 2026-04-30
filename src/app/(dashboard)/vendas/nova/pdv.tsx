@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { formatCurrency, formatDecimal } from '@/lib/utils'
 import { Trash2, Check, Search, ShoppingCart, X, AlertTriangle, Minus, Plus, Star } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { BarcodeScanner } from '@/components/shared/barcode-scanner'
 import { useHardwareScanner } from '@/hooks/use-hardware-scanner'
 
@@ -61,7 +60,6 @@ interface FeaturedProduct {
 }
 
 export function PDV({ products, featuredProducts = [] }: { products: Product[]; featuredProducts?: FeaturedProduct[] }) {
-  const router = useRouter()
   const { toast } = useToast()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const finalizeFormRef = useRef<HTMLFormElement>(null)
@@ -157,7 +155,9 @@ export function PDV({ products, featuredProducts = [] }: { products: Product[]; 
         toast(result.error, 'error')
       } else {
         toast('Venda concluída com sucesso!')
-        router.push(`/vendas/${saleId}`)
+        setCart([])
+        setSearch('')
+        searchInputRef.current?.focus()
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao finalizar venda'
@@ -434,6 +434,9 @@ export function PDV({ products, featuredProducts = [] }: { products: Product[]; 
           <div className="flex flex-wrap gap-2">
             {featuredProducts.map((fp) => {
               const full = products.find((p) => p.id === fp.productId)
+              const displayPrice = full
+                ? Number(getBaseUnit(full)?.salePrice ?? full.salePrice)
+                : fp.salePrice
               return (
                 <button
                   key={fp.productId}
@@ -443,7 +446,7 @@ export function PDV({ products, featuredProducts = [] }: { products: Product[]; 
                   className="flex flex-col items-start gap-0.5 rounded-lg border border-border bg-background hover:bg-muted hover:border-primary/40 transition-colors px-3 py-2 text-left disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="text-xs font-medium leading-tight max-w-[120px] truncate">{fp.name}</span>
-                  <span className="text-[11px] text-primary font-semibold">{formatCurrency(fp.salePrice)}</span>
+                  <span className="text-[11px] text-primary font-semibold">{formatCurrency(displayPrice)}</span>
                 </button>
               )
             })}
